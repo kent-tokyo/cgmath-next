@@ -1,0 +1,42 @@
+name: Publish to crates.io
+
+# Manual, one-shot publish trigger only -- never runs on push/PR/schedule.
+# This is the sole mechanism authorized to run `cargo publish` against the
+# real registry; see docs/release-checklist.md and AGENTS.md section 21
+# (stop-and-report items) for the human-approval context this exists
+# under. `--no-verify`/`--allow-dirty` are never used here.
+on:
+  workflow_dispatch:
+    inputs:
+      confirm_version:
+        description: "Type the exact version being published, to confirm this dispatch is intentional (e.g. 0.18.1-alpha.1)"
+        required: true
+
+jobs:
+  publish:
+    name: cargo publish
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Confirm input matches Cargo.toml version
+        env:
+          CONFIRM_VERSION: ${{ inputs.confirm_version }}
+        run: |
+          EXPECTED=$(grep -m1 '^version' Cargo.toml | sed -E 's/version = "(.*)"/\1/')
+          if [ "$CONFIRM_VERSION" != "$EXPECTED" ]; then
+            echo "::error::confirmation input '$CONFIRM_VERSION' does not match Cargo.toml version '$EXPECTED' -- aborting, nothing published"
+            exit 1
+          fi
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - name: cargo publish --dry-run (sanity check before the real, irreversible publish)
+        run: cargo publish --dry-run
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+
+      - name: cargo publish
+        run: cargo publish
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
