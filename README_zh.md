@@ -11,7 +11,7 @@
 
 > 保留 API,消除 unsoundness(健全性缺陷)。
 
-`cgmath-next` 是 [`cgmath`](https://github.com/rustgd/cgmath) 的**社区维护后继项目**,fork 自已发布的 0.18.0 版本。它**不是官方的延续项目**,也不意味着与原 `cgmath` 维护者有任何关联或获得其认可。
+`cgmath-next` 是基于 [`cgmath`](https://github.com/rustgd/cgmath) 0.18.0 独立开发和维护的社区后继库。
 
 原始的 `cgmath` 已经无人维护
 ([RUSTSEC-2026-0196](https://rustsec.org/advisories/RUSTSEC-2026-0196.html)),

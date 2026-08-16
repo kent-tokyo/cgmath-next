@@ -11,7 +11,7 @@
 
 > APIはそのまま、unsoundnessだけを取り除く。
 
-`cgmath-next` は [`cgmath`](https://github.com/rustgd/cgmath) の**コミュニティ主導の後継**です。公開済みの0.18.0リリースからforkしています。**公式な後継ではなく**、オリジナルの`cgmath`メンテナーによる提携・承認を意味するものでもありません。
+`cgmath-next`は、[`cgmath`](https://github.com/rustgd/cgmath) 0.18.0を基に独立して開発される、コミュニティ運営の互換後継ライブラリです。
 
 オリジナルの`cgmath`は保守が止まっており
 ([RUSTSEC-2026-0196](https://rustsec.org/advisories/RUSTSEC-2026-0196.html))、

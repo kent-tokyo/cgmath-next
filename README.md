@@ -11,10 +11,8 @@ A maintained, soundness-focused, source-compatible successor to cgmath 0.18.
 
 > Keep the API. Remove the unsoundness.
 
-`cgmath-next` is a **community-maintained successor** to
-[`cgmath`](https://github.com/rustgd/cgmath), forked from the published
-0.18.0 release. It is **not an official continuation** and implies no
-affiliation with, or endorsement by, the original `cgmath` maintainers.
+`cgmath-next` is an independently maintained, community successor to
+[`cgmath`](https://github.com/rustgd/cgmath) 0.18.0.
 
 The original `cgmath` is unmaintained
 ([RUSTSEC-2026-0196](https://rustsec.org/advisories/RUSTSEC-2026-0196.html))
