@@ -65,18 +65,35 @@ same-align fields and no padding produces a layout byte-identical to
 standard, widely-relied-upon pattern for this category of crate (bytemuck's
 `Pod` derive works on exactly this class of type for the same reason).
 
-**Miri coverage:** not directly targeted. Exercised incidentally by
-existing conversion tests (`tests/vector.rs`, `tests/matrix.rs`,
-`tests/point.rs` `From`/`Into` array round-trips) but those were not run
-under Miri in this session -- only the swap regression suite
-(`tests/soundness`) and `tests/matrix.rs` were (see below).
+**Miri coverage:** dedicated regression suite added,
+`tests/soundness/array_conversions.rs` (wired into the existing
+`tests/soundness.rs` harness via `#[path]`, same pattern as
+`swap_columns.rs`/`swap_elements.rs`). Covers all 8 types in this group
+(`Vector1/2/3/4`, `Point1/2/3`, `Quaternion`, plus both the nested
+`[[S; n]; n]` and flat `[S; n*n]` array forms for `Matrix2/3/4`) across
+all 4 directions (`AsRef`, `AsMut`, `From<&[..]>`, `From<&mut [..]>`).
+Each test checks not just values but write-back through the transmuted
+reference in both directions: mutating the array view returned by
+`as_mut()` is asserted to change the original struct's fields, and
+mutating the struct view returned by `From<&mut [..]>` is asserted to
+change the original array -- the case Miri's aliasing model can actually
+catch that a value-only assertion cannot. 14/14 pass under `cargo
++nightly miri test --test soundness array_conversions`, and again
+identically under `MIRIFLAGS="-Zmiri-strict-provenance"`. The full
+`tests/soundness` binary (36 tests: these 14 plus the pre-existing
+swap-family regressions) also passes complete under both plain `cargo
+test --test soundness` and unfiltered `cargo +nightly miri test --test
+soundness` -- fast enough that CI's existing unfiltered
+`cargo miri test --test soundness` step already exercises this suite on
+every push with no workflow change needed.
 
 **Tests:** `tests/vector.rs`, `tests/point.rs`, `tests/matrix.rs` (array
-round-trip assertions, pre-existing upstream tests, unmodified).
+round-trip assertions, pre-existing upstream tests, unmodified);
+`tests/soundness/array_conversions.rs` (new, this session, Miri-targeted).
 
-**Status:** audited sound. Not re-verified under Miri with
-`-Zmiri-strict-provenance` in this session -- recommended before the
-0.18.1 stable gate.
+**Status:** audited sound, and now with dedicated Miri regression
+coverage including `-Zmiri-strict-provenance` (previously recommended
+as outstanding before the stable gate; now done).
 
 ---
 

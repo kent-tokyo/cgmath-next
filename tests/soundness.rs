@@ -15,8 +15,10 @@
 
 //! Regression tests for RUSTSEC-2026-0197 / rustgd/cgmath#565: same-index
 //! calls into safe swap APIs must not create aliased `&mut` references.
-//! Run under Miri (see docs/unsafe-audit.md) to catch the aliasing
-//! violation, not just the (unaffected) output values.
+//! Also covers UNSAFE-001 (docs/unsafe-audit.md): the fixed-size-array
+//! reference conversions' transmutes. Run under Miri (see
+//! docs/unsafe-audit.md) to catch aliasing violations, not just the
+//! (unaffected) output values.
 //!
 //! Cargo only auto-discovers direct children of `tests/` as test binaries,
 //! so these use `#[path]` to pull content from `tests/soundness/` while
@@ -26,6 +28,8 @@
 
 extern crate cgmath;
 
+#[path = "soundness/array_conversions.rs"]
+mod array_conversions;
 #[path = "soundness/swap_columns.rs"]
 mod swap_columns;
 #[path = "soundness/swap_elements.rs"]
