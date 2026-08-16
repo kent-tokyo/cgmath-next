@@ -103,5 +103,14 @@ jobs:
       # scope is reserved for release candidates, not every push.
       - name: swap_columns/swap_elements soundness regression
         run: cargo miri test --test soundness
+      # --skip test_slerp: Miri has documented non-deterministic float
+      # evaluation for transcendental/trig operations (see docs/baseline.md's
+      # addendum). slerp's assert_ulps_eq! checks trip on this by ~1e-16,
+      # independent of source changes -- confirmed by running the identical
+      # command against a commit before and after an unrelated change and
+      # seeing the same non-deterministic pass/fail pattern either way. Not
+      # a soundness signal; unrelated to any unsafe/conversion path this
+      # step exists to cover. The tests themselves are untouched and still
+      # run under plain `cargo test` and manual `cargo miri test --lib`.
       - name: representative matrix/vector conversion + unsafe-audited paths
-        run: cargo miri test --lib
+        run: cargo miri test --lib -- --skip test_slerp
