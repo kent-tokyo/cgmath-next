@@ -4,10 +4,13 @@ Tracks AGENTS.md §20's completion conditions. Update this file as items
 change status -- it's the single source of truth for "are we ready to cut
 a release," not a snapshot to be trusted stale.
 
-**Neither series has been published to crates.io.** No tag exists. No
-GitHub release exists. `crates.io` publish, tag creation, and default-
-branch pushes are all AGENTS.md §21 stop-and-report items, not something
-this project's automation does on its own.
+**`0.18.1-alpha.1` is published to crates.io** (2026-08-16), tagged
+(`v0.18.1-alpha.1`, commit `e6c07a0`), and released on GitHub as a
+pre-release. `0.18.1` stable has **not** been published -- no tag, no
+GitHub Release, nothing beyond the alpha exists yet. `crates.io` publish,
+tag creation, and GitHub Release creation remain AGENTS.md §21
+stop-and-report items requiring explicit human approval each time; the
+alpha.1 approval already exercised does not carry forward to stable.
 
 ## 0.18.1-alpha.1
 
@@ -35,7 +38,7 @@ approval (§21) -- this document does not constitute that approval.
 | # | Condition | Status |
 |---|---|---|
 | 1 | Zero unexplained public API removals | met -- zero API diff |
-| 2 | Zero known safe-to-UB paths | **guarded, not literally zero** -- `UNSAFE-002` (tuple-layout transmute) now runs a runtime layout check (size/align/per-field offset) before every transmute in this category, panicking instead of transmuting on a mismatch; verified via Miri, a negative-control test, and release-build disassembly confirming zero cost when layout matches (see `docs/unsafe-audit.md`'s feasibility-study section). This converts the failure mode from silent UB to a loud panic -- it is **not** a language-level soundness proof, tuple layout remains officially unspecified, so this row is "guarded" rather than truly "met" |
+| 2 | Zero known safe-to-UB paths | **guarded and accepted, not literally zero.** `UNSAFE-002` (tuple-layout transmute) runs a runtime layout check (size/align/per-field offset) before every transmute in this category, panicking instead of transmuting on a mismatch; verified via Miri, a negative-control test, and release-build disassembly confirming zero cost when layout matches (see `docs/unsafe-audit.md`'s feasibility-study section). This converts the failure mode from silent UB to a loud panic -- it is **not** a language-level soundness proof, tuple layout remains officially unspecified. **This is now a permanent, explicitly accepted known limitation of the `0.18.x` stable series**, not an open item pending further work: closing it fully would require removing the reference-returning conversions, a public API change that's out of scope for `0.18.x` by the series' own compatibility policy (see `CONTRIBUTING.md`). Accepting this row as "guarded" rather than "met" is a deliberate release decision, recorded here for the stable release, not a gap someone forgot to close |
 | 3 | Remaining unsafe invariants are documented | met -- `docs/unsafe-audit.md` |
 | 4 | Release-targeted unsafe tests pass under Miri | **met.** `UNSAFE-001` has a dedicated Miri regression suite (`tests/soundness/array_conversions.rs`, 14 tests, all `AsRef`/`AsMut`/`From<&[..]>`/`From<&mut [..]>` paths across `Vector1-4`/`Point1-3`/`Matrix2-4`/`Quaternion`, including write-back-through-the-view checks and `-Zmiri-strict-provenance`); `UNSAFE-002` already has its own Miri coverage (see row 2); `UNSAFE-003` and `UNSAFE-004` are resolved/deleted, so there is nothing unsafe left in either category to test under Miri |
 | 5 | serde, mint, rand, swizzle compatibility is verified | **met.** `serde` and `mint` have dedicated differential tests against real `cgmath` 0.18.0 (`compat/fixtures/dual-dep/`, 11/11 pass, byte-exact for serde and orientation-verified for mint); `rand`'s `Distribution` impls are confirmed byte-identical to pristine 0.18.0 source and have a dedicated contract test (`tests/rand_distribution.rs`, 6/6 pass); `swizzle`'s full 550-method inventory is confirmed byte-identical to pristine 0.18.0 with the feature on and empty with it off, plus a compile-fail fixture (`compat/fixtures/swizzle-off/`); `serde`/`mint`/`rand` all have confirmed feature-off dependency-graph leak checks. The `dual-dep` and `swizzle-off` fixtures now also run as a blocking `compat` CI job on every push/PR, so this evidence is continuously regression-checked, not just point-in-time. See `docs/compatibility.md` for the full detail behind each -- this is stronger than "pairwise `cargo test` passes", which was the prior state |
@@ -136,4 +139,109 @@ approval (§21) -- this document does not constitute that approval.
    0 regressions, 0 unexplained differences. CI run
    [31943457863](https://github.com/kent-tokyo/cgmath-next/actions/runs/31943457863)
    (the swizzle-verification commit) green on every blocking job.
-7. Human review and explicit publish approval.
+7. Human review and explicit publish approval -- done for `alpha.1`
+   (2026-08-16). Stable requires its own separate approval; see
+   "Stable release track" below.
+
+## Stable release track (0.18.1-alpha.1 -> 0.18.1)
+
+Started 2026-08-16, per explicit user instruction. Goal: lock the
+verification `alpha.1` already has into continuous CI, ensure release
+artifact reproducibility, and reach a defensible stable state -- not new
+feature work.
+
+### Scope freeze (in effect until 0.18.1 stable ships)
+
+**Forbidden:** new features, new public API, public item removal, trait
+bound changes, serialization format changes, matrix/vector/quaternion
+layout changes, numeric convention changes, default feature changes,
+MSRV changes, unnecessary new dependencies, large refactors, broad
+performance-motivated changes.
+
+**Allowed:** soundness fixes, compatibility fixes, release-infrastructure
+fixes, CI regression prevention, documentation factual corrections,
+package metadata fixes, release-blocker bug fixes.
+
+If any change outside the allowed list becomes necessary before stable
+ships, that's the trigger to insert `0.18.1-rc.1` and stop-and-report
+(see "RC decision" below) -- not to proceed straight to stable anyway.
+
+### Phase 1: release infrastructure lock-down
+
+- [x] `compat` CI job (`.github/workflows/ci.yml`) already ran
+  `dual-dep` (serde/mint differential) and `swizzle-off` (negative +
+  positive control) as blocking steps on every push (added pre-`alpha.1`,
+  commit `6bf4582`).
+- [x] Swizzle-off negative control strengthened: now checks for
+  `E0599`, `no method`, and `xy` in build output (previously only the
+  first and third), so a differently-worded compiler error can't be
+  mistaken for the expected one. Commit `dce66da`.
+- [x] serde/mint/rand feature-leak check added to the `compat` job,
+  verified in **both directions** (absent with no features, present
+  with `--all-features`) so the check can't pass vacuously if it were
+  ever pointed at the wrong dependency name. Previously only a one-time
+  manual `cargo tree` check recorded in `docs/compatibility.md`. Commit
+  `dce66da`.
+- [x] `Cargo.toml`: `publish = ["crates-io"]` added, preventing an
+  accidental publish to the wrong registry. Commit `9c9df1f`.
+- [x] `publish.yml`: `permissions: contents: read` (least privilege) and
+  a `concurrency: group: crates-io-publish, cancel-in-progress: false`
+  block added. Commit `9c9df1f`.
+- [ ] **Not yet done:** `environment: crates-io` on the publish job,
+  gated by a required-reviewer protection rule. The environment must be
+  created in repo Settings > Environments first (with the repo owner as
+  required reviewer, and a deployment branch policy restricting it to
+  `main`) -- this is a repo-settings mutation outside git, blocked from
+  being done via API this session (denied by the operating agent's
+  permission classifier), needs the repo owner to do it directly. Until
+  this exists, `publish.yml` intentionally does **not** reference the
+  environment (see the `TODO` comment in that file) -- referencing an
+  unprotected/nonexistent environment would claim a safety gate that
+  isn't actually there.
+- [x] `UNSAFE-002` explicitly documented as an accepted permanent known
+  limitation of the stable series, not an open item -- see row 2 of the
+  stable table above. This update.
+
+### RC decision
+
+**`0.18.1-rc.1` is not a mandatory step.** If no significant code-level
+change occurs during this stabilization phase, proceed directly from
+`alpha.1` to `0.18.1` stable after the final preflight -- do not insert
+an RC just for its own sake. This reflects that `0.18.1` is a narrowly
+scoped maintenance release (existing-API compatibility, a known-UB fix,
+zero public API diff, reverse-dependency-verified, Miri/feature-matrix
+verified), not a new-feature release, and there are essentially no
+external users yet for an RC to add meaningful additional coverage over.
+
+**Only insert `0.18.1-rc.1` and stop-and-report if, before stable, any
+of the following happen:**
+- The soundness implementation (`UNSAFE-001`-`004` or their guards) is
+  changed again.
+- Public API or a trait bound is touched.
+- Anything touching serialization format or matrix/vector/quaternion
+  layout changes.
+- A dependency or the MSRV changes.
+- A real compatibility problem is reported against `alpha.1` by an
+  external user.
+
+### Timeline
+
+Keep `alpha.1` published as-is for a short observation window (days to
+~1 week) while this Phase 1 checklist completes, **and separately**
+while watching for alpha-user-reported issues. This window is
+time-gated, not effort-gated: finishing every checklist item above does
+**not** by itself authorize moving to stable early -- the point of the
+window is elapsed real-world exposure, which finishing infrastructure
+work faster cannot substitute for. Upstream/RustSec reply status is
+explicitly **not** part of this gate (see the project memory recorded
+2026-08-16 correcting an earlier, overly cautious version of this same
+plan).
+
+Before publishing `0.18.1` stable, still need:
+- The observation window to actually elapse.
+- No major soundness/compatibility report against `alpha.1`.
+- A final preflight from the packaged crate (same rigor as `alpha.1`'s:
+  `cargo package --list`, both dry-run variants, extract-and-test the
+  actual `.crate`).
+- Explicit human publish approval for stable specifically (not inherited
+  from the `alpha.1` approval).
