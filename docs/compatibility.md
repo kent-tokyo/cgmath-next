@@ -155,8 +155,14 @@ test).
 
 ## Reverse-dependency fixtures (AGENTS.md §14)
 
-See `compat/fixtures/` for real crates.io reverse-dependencies verified
-against `cgmath-next` via the dependency-rename mechanism, if present at
-the time of reading. As of this document's last update: see
-`docs/release-checklist.md` for current count and status against the
-alpha (3+) / stable (5+) gates.
+See `compat/fixtures/reverse-deps/RESULTS.md` for the full record. 3 real
+crates.io reverse-dependencies verified against `cgmath-next` via the
+dependency-rename mechanism: `arcball` (camera control, pass, 0 changes),
+`crevice` (GPU/GLSL layout + mint interop, pass, 0 changes), and
+`truck-base` (CAD kernel base, pass after 4 one-line changes -- a
+genuinely interesting multi-crate rename propagation case involving a
+third-party `cgmath` extension crate, not a `cgmath-next` compatibility
+gap; see the linked doc for the full diagnosis).
+
+This meets the §20 alpha gate (3+). The §20 stable gate (5+) is not yet
+met.
