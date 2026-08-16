@@ -862,6 +862,7 @@ impl<S: BaseFloat> SquareMatrix for Matrix4<S> {
     }
 
     fn determinant(&self) -> S {
+        // SAFETY: 1, 2, 3 are all in 0..4, see det_sub_proc_unsafe.
         let tmp = unsafe { det_sub_proc_unsafe(self, 1, 2, 3) };
         tmp.dot(Vector4::new(self[0][0], self[1][0], self[2][0], self[3][0]))
     }
@@ -919,6 +920,10 @@ impl<S: BaseFloat> SquareMatrix for Matrix4<S> {
     }
     #[cfg(feature = "simd")]
     fn invert(&self) -> Option<Matrix4<S>> {
+        // SAFETY (this fn's 4 det_sub_proc_unsafe calls): all index
+        // arguments are literal constants in 0..4, see det_sub_proc_unsafe.
+        // Dead code in a normal build -- `simd` is not a resolvable Cargo
+        // feature, see docs/unsafe-audit.md UNSAFE-004.
         let tmp0 = unsafe { det_sub_proc_unsafe(self, 1, 2, 3) };
         let det = tmp0.dot(Vector4::new(self[0][0], self[1][0], self[2][0], self[3][0]));
 
@@ -1471,6 +1476,11 @@ macro_rules! fixed_array_conversions {
         impl<$S> AsRef<[[$S; $n]; $n]> for $MatrixN<$S> {
             #[inline]
             fn as_ref(&self) -> &[[$S; $n]; $n] {
+                // SAFETY: `$MatrixN<$S>` is `#[repr(C)]` with exactly `$n`
+                // columns of type `$S`'s vector type, each of which is
+                // itself `#[repr(C)]` with `$n` fields of `$S` and no
+                // padding, so the whole matrix's layout is byte-identical
+                // to `[[$S; $n]; $n]` (column-major).
                 unsafe { mem::transmute(self) }
             }
         }
@@ -1478,6 +1488,8 @@ macro_rules! fixed_array_conversions {
         impl<$S> AsMut<[[$S; $n]; $n]> for $MatrixN<$S> {
             #[inline]
             fn as_mut(&mut self) -> &mut [[$S; $n]; $n] {
+                // SAFETY: see `AsRef` above; `self` is uniquely borrowed
+                // here so there is no aliasing.
                 unsafe { mem::transmute(self) }
             }
         }
@@ -1493,6 +1505,7 @@ macro_rules! fixed_array_conversions {
         impl<'a, $S> From<&'a [[$S; $n]; $n]> for &'a $MatrixN<$S> {
             #[inline]
             fn from(m: &'a [[$S; $n]; $n]) -> &'a $MatrixN<$S> {
+                // SAFETY: see `AsRef` above.
                 unsafe { mem::transmute(m) }
             }
         }
@@ -1500,6 +1513,7 @@ macro_rules! fixed_array_conversions {
         impl<'a, $S> From<&'a mut [[$S; $n]; $n]> for &'a mut $MatrixN<$S> {
             #[inline]
             fn from(m: &'a mut [[$S; $n]; $n]) -> &'a mut $MatrixN<$S> {
+                // SAFETY: see `AsMut` above.
                 unsafe { mem::transmute(m) }
             }
         }
@@ -1515,6 +1529,9 @@ macro_rules! fixed_array_conversions {
         impl<$S> AsRef<[$S; ($n * $n)]> for $MatrixN<$S> {
             #[inline]
             fn as_ref(&self) -> &[$S; ($n * $n)] {
+                // SAFETY: same layout argument as the `[[$S; $n]; $n]`
+                // `AsRef` impl above, further flattened -- `[[$S; $n]; $n]`
+                // and `[$S; $n * $n]` are themselves layout-identical.
                 unsafe { mem::transmute(self) }
             }
         }
@@ -1522,6 +1539,8 @@ macro_rules! fixed_array_conversions {
         impl<$S> AsMut<[$S; ($n * $n)]> for $MatrixN<$S> {
             #[inline]
             fn as_mut(&mut self) -> &mut [$S; ($n * $n)] {
+                // SAFETY: see `AsRef` above; `self` is uniquely borrowed
+                // here so there is no aliasing.
                 unsafe { mem::transmute(self) }
             }
         }
@@ -1537,6 +1556,7 @@ macro_rules! fixed_array_conversions {
         impl<'a, $S> From<&'a [$S; ($n * $n)]> for &'a $MatrixN<$S> {
             #[inline]
             fn from(m: &'a [$S; ($n * $n)]) -> &'a $MatrixN<$S> {
+                // SAFETY: see `AsRef` above.
                 unsafe { mem::transmute(m) }
             }
         }
@@ -1544,6 +1564,7 @@ macro_rules! fixed_array_conversions {
         impl<'a, $S> From<&'a mut [$S; ($n * $n)]> for &'a mut $MatrixN<$S> {
             #[inline]
             fn from(m: &'a mut [$S; ($n * $n)]) -> &'a mut $MatrixN<$S> {
+                // SAFETY: see `AsMut` above.
                 unsafe { mem::transmute(m) }
             }
         }
@@ -1735,6 +1756,10 @@ where
 }
 
 // Sub procedure for SIMD when dealing with determinant and inversion
+//
+// SAFETY (caller requirement): `x`, `y`, `z` must each be in `0..4`, since
+// they're used to index a 16-element array at offsets up to `12 + {x,y,z}`.
+// See docs/unsafe-audit.md UNSAFE-003.
 #[inline]
 unsafe fn det_sub_proc_unsafe<S: BaseFloat>(
     m: &Matrix4<S>,

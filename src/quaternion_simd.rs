@@ -25,6 +25,14 @@ use simd::f32x4 as Simdf32x4;
 impl From<Simdf32x4> for Quaternion<f32> {
     #[inline]
     fn from(f: Simdf32x4) -> Self {
+        // SAFETY: `mem::uninitialized()` is only sound here because every
+        // byte of `ret` is unconditionally overwritten by `f.store(...)`
+        // below before any read. Dead code in any normal build: `simd` is
+        // not a resolvable Cargo feature (see docs/unsafe-audit.md
+        // UNSAFE-004) and the `simd` crate this file imports isn't even a
+        // declared dependency. `mem::uninitialized` is deprecated
+        // upstream-wide; a revival of this file should use `MaybeUninit`
+        // instead of keeping this pattern.
         unsafe {
             let mut ret: Self = mem::uninitialized();
             {

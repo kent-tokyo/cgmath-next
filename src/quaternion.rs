@@ -550,6 +550,9 @@ impl<S: BaseFloat> Into<[S; 4]> for Quaternion<S> {
 impl<S: BaseFloat> AsRef<[S; 4]> for Quaternion<S> {
     #[inline]
     fn as_ref(&self) -> &[S; 4] {
+        // SAFETY: `Quaternion<S>` is `#[repr(C)]` with fields `v: Vector3<S>`
+        // (itself `#[repr(C)]`, 3 `S` fields) then `s: S`, and no padding,
+        // so its layout is byte-identical to `[S; 4]` as `[v.x, v.y, v.z, s]`.
         unsafe { mem::transmute(self) }
     }
 }
@@ -557,6 +560,7 @@ impl<S: BaseFloat> AsRef<[S; 4]> for Quaternion<S> {
 impl<S: BaseFloat> AsMut<[S; 4]> for Quaternion<S> {
     #[inline]
     fn as_mut(&mut self) -> &mut [S; 4] {
+        // SAFETY: see `AsRef` above; `self` is uniquely borrowed here.
         unsafe { mem::transmute(self) }
     }
 }
@@ -571,6 +575,7 @@ impl<S: BaseFloat> From<[S; 4]> for Quaternion<S> {
 impl<'a, S: BaseFloat> From<&'a [S; 4]> for &'a Quaternion<S> {
     #[inline]
     fn from(v: &'a [S; 4]) -> &'a Quaternion<S> {
+        // SAFETY: see the `AsRef<[S; 4]>` impl above.
         unsafe { mem::transmute(v) }
     }
 }
@@ -578,6 +583,7 @@ impl<'a, S: BaseFloat> From<&'a [S; 4]> for &'a Quaternion<S> {
 impl<'a, S: BaseFloat> From<&'a mut [S; 4]> for &'a mut Quaternion<S> {
     #[inline]
     fn from(v: &'a mut [S; 4]) -> &'a mut Quaternion<S> {
+        // SAFETY: see the `AsMut<[S; 4]>` impl above.
         unsafe { mem::transmute(v) }
     }
 }
@@ -597,6 +603,12 @@ impl<S: BaseFloat> Into<(S, S, S, S)> for Quaternion<S> {
 impl<S: BaseFloat> AsRef<(S, S, S, S)> for Quaternion<S> {
     #[inline]
     fn as_ref(&self) -> &(S, S, S, S) {
+        // SAFETY: relies on `(S, S, S, S)`'s in-memory field order matching
+        // `Quaternion<S>`'s `#[repr(C)]` `[v.x, v.y, v.z, s]` order. NOT
+        // guaranteed by the language reference (plain tuple layout is
+        // unspecified), but stable in practice under current rustc for a
+        // homogeneous same-size, same-align tuple. See
+        // docs/unsafe-audit.md UNSAFE-002.
         unsafe { mem::transmute(self) }
     }
 }
@@ -604,6 +616,7 @@ impl<S: BaseFloat> AsRef<(S, S, S, S)> for Quaternion<S> {
 impl<S: BaseFloat> AsMut<(S, S, S, S)> for Quaternion<S> {
     #[inline]
     fn as_mut(&mut self) -> &mut (S, S, S, S) {
+        // SAFETY: see `AsRef` above (docs/unsafe-audit.md UNSAFE-002).
         unsafe { mem::transmute(self) }
     }
 }
@@ -620,6 +633,8 @@ impl<S: BaseFloat> From<(S, S, S, S)> for Quaternion<S> {
 impl<'a, S: BaseFloat> From<&'a (S, S, S, S)> for &'a Quaternion<S> {
     #[inline]
     fn from(v: &'a (S, S, S, S)) -> &'a Quaternion<S> {
+        // SAFETY: see the `AsRef<(S, S, S, S)>` impl above
+        // (docs/unsafe-audit.md UNSAFE-002).
         unsafe { mem::transmute(v) }
     }
 }
@@ -627,6 +642,8 @@ impl<'a, S: BaseFloat> From<&'a (S, S, S, S)> for &'a Quaternion<S> {
 impl<'a, S: BaseFloat> From<&'a mut (S, S, S, S)> for &'a mut Quaternion<S> {
     #[inline]
     fn from(v: &'a mut (S, S, S, S)) -> &'a mut Quaternion<S> {
+        // SAFETY: see the `AsMut<(S, S, S, S)>` impl above
+        // (docs/unsafe-audit.md UNSAFE-002).
         unsafe { mem::transmute(v) }
     }
 }

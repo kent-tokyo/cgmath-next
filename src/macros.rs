@@ -178,6 +178,10 @@ macro_rules! impl_fixed_array_conversions {
         impl<$S> AsRef<[$S; $n]> for $ArrayN<$S> {
             #[inline]
             fn as_ref(&self) -> &[$S; $n] {
+                // SAFETY: `$ArrayN<$S>` is `#[repr(C)]` with exactly `$n`
+                // fields of type `$S` and no padding (`$S: BaseNum` is
+                // always a primitive numeric type whose size equals its
+                // alignment), so its layout is byte-identical to `[$S; $n]`.
                 unsafe { mem::transmute(self) }
             }
         }
@@ -185,6 +189,9 @@ macro_rules! impl_fixed_array_conversions {
         impl<$S> AsMut<[$S; $n]> for $ArrayN<$S> {
             #[inline]
             fn as_mut(&mut self) -> &mut [$S; $n] {
+                // SAFETY: see `AsRef` above; the same layout identity holds
+                // for the mutable reference, and `self` is uniquely
+                // borrowed here so there is no aliasing.
                 unsafe { mem::transmute(self) }
             }
         }
@@ -200,6 +207,7 @@ macro_rules! impl_fixed_array_conversions {
         impl<'a, $S> From<&'a [$S; $n]> for &'a $ArrayN<$S> {
             #[inline]
             fn from(v: &'a [$S; $n]) -> &'a $ArrayN<$S> {
+                // SAFETY: see `AsRef` above.
                 unsafe { mem::transmute(v) }
             }
         }
@@ -207,6 +215,7 @@ macro_rules! impl_fixed_array_conversions {
         impl<'a, $S> From<&'a mut [$S; $n]> for &'a mut $ArrayN<$S> {
             #[inline]
             fn from(v: &'a mut [$S; $n]) -> &'a mut $ArrayN<$S> {
+                // SAFETY: see `AsMut` above.
                 unsafe { mem::transmute(v) }
             }
         }
@@ -226,6 +235,14 @@ macro_rules! impl_tuple_conversions {
         impl<$S> AsRef<$Tuple> for $ArrayN<$S> {
             #[inline]
             fn as_ref(&self) -> &$Tuple {
+                // SAFETY: relies on `$Tuple`'s in-memory field order
+                // matching `$ArrayN<$S>`'s `#[repr(C)]` declaration order.
+                // This is NOT guaranteed by the Rust language reference --
+                // plain tuple layout is unspecified -- but is stable in
+                // practice for a homogeneous tuple of same-size, same-align
+                // primitive fields under current rustc. See
+                // docs/unsafe-audit.md UNSAFE-002 for the caveat and the
+                // recommended follow-up (`-Zrandomize-layout` check).
                 unsafe { mem::transmute(self) }
             }
         }
@@ -233,6 +250,7 @@ macro_rules! impl_tuple_conversions {
         impl<$S> AsMut<$Tuple> for $ArrayN<$S> {
             #[inline]
             fn as_mut(&mut self) -> &mut $Tuple {
+                // SAFETY: see `AsRef` above (docs/unsafe-audit.md UNSAFE-002).
                 unsafe { mem::transmute(self) }
             }
         }
@@ -247,6 +265,7 @@ macro_rules! impl_tuple_conversions {
         impl<'a, $S> From<&'a $Tuple> for &'a $ArrayN<$S> {
             #[inline]
             fn from(v: &'a $Tuple) -> &'a $ArrayN<$S> {
+                // SAFETY: see `AsRef` above (docs/unsafe-audit.md UNSAFE-002).
                 unsafe { mem::transmute(v) }
             }
         }
@@ -254,6 +273,7 @@ macro_rules! impl_tuple_conversions {
         impl<'a, $S> From<&'a mut $Tuple> for &'a mut $ArrayN<$S> {
             #[inline]
             fn from(v: &'a mut $Tuple) -> &'a mut $ArrayN<$S> {
+                // SAFETY: see `AsMut` above (docs/unsafe-audit.md UNSAFE-002).
                 unsafe { mem::transmute(v) }
             }
         }
