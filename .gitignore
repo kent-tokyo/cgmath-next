@@ -10,5 +10,7 @@
 /vendor/
 /_extract/
 /target/
-/compat/target/
 /.claude/
+/_upstream-master/
+compat/fixtures/**/target/
+compat/fixtures/**/Cargo.lock
