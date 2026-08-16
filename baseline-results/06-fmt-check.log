@@ -1,0 +1,131 @@
+=== cargo fmt --check ===
+Diff in /Users/k_tanabe/Documents/Documents/security_project/cgmath-next/src/matrix.rs:1153:
+ }
+ 
+ impl<S: BaseFloat> Transform<Point3<S>> for Matrix4<S> {
+[31m-
+(B[m     fn look_at(eye: Point3<S>, center: Point3<S>, up: Vector3<S>) -> Matrix4<S> {
+         Matrix4::look_at_rh(eye, center, up)
+     }
+Diff in /Users/k_tanabe/Documents/Documents/security_project/cgmath-next/src/quaternion.rs:106:
+     }
+ 
+     /// Do a normalized linear interpolation with `other`, by `amount`.
+[31m-    /// 
+(B[m[32m+    ///
+(B[m     /// This takes the shortest path, so if the quaternions have a negative
+     /// dot product, the interpolation will be between `self` and `-other`.
+     pub fn nlerp(self, mut other: Quaternion<S>, amount: S) -> Quaternion<S> {
+Diff in /Users/k_tanabe/Documents/Documents/security_project/cgmath-next/src/quaternion.rs:121:
+     ///
+     /// Return the spherical linear interpolation between the quaternion and
+     /// `other`. Both quaternions should be normalized first.
+[31m-    /// 
+(B[m[32m+    ///
+(B[m     /// This takes the shortest path, so if the quaternions have a negative
+     /// dot product, the interpolation will be between `self` and `-other`.
+     ///
+Diff in /Users/k_tanabe/Documents/Documents/security_project/cgmath-next/src/quaternion.rs:933:
+             -0.5576775358252053,
+             -0.5576775358252053,
+             -0.5576775358252053,
+[31m-            0.2588190451025208
+(B[m[32m+            0.2588190451025208,
+(B[m         ]);
+         assert_ulps_eq!(expected, q.slerp(r, 0.25));
+     }
+Diff in /Users/k_tanabe/Documents/Documents/security_project/cgmath-next/tests/matrix.rs:733:
+         let up = Vector3::unit_y();
+         let m = Matrix3::look_to_lh(dir, up);
+ 
+[31m-        assert_ulps_eq!(m, Matrix3::from([
+(B[m[31m-            [0.9486833, -0.16903085, 0.26726127],
+(B[m[31m-            [0.0, 0.8451542, 0.53452253],
+(B[m[31m-            [-0.31622776, -0.50709254, 0.8017838_f32]
+(B[m[31m-        ]));
+(B[m[32m+        assert_ulps_eq!(
+(B[m[32m+            m,
+(B[m[32m+            Matrix3::from([
+(B[m[32m+                [0.9486833, -0.16903085, 0.26726127],
+(B[m[32m+                [0.0, 0.8451542, 0.53452253],
+(B[m[32m+                [-0.31622776, -0.50709254, 0.8017838_f32]
+(B[m[32m+            ])
+(B[m[32m+        );
+(B[m 
+         #[allow(deprecated)]
+         {
+Diff in /Users/k_tanabe/Documents/Documents/security_project/cgmath-next/tests/matrix.rs:751:
+         let up = Vector3::unit_y();
+         let m = Matrix3::look_to_rh(dir, up);
+ 
+[31m-        assert_ulps_eq!(m, Matrix3::from([
+(B[m[31m-            [-0.9486833, -0.16903085, -0.26726127],
+(B[m[31m-            [0.0, 0.8451542, -0.53452253],
+(B[m[31m-            [0.31622776, -0.50709254, -0.8017838_f32]
+(B[m[31m-        ]));
+(B[m[32m+        assert_ulps_eq!(
+(B[m[32m+            m,
+(B[m[32m+            Matrix3::from([
+(B[m[32m+                [-0.9486833, -0.16903085, -0.26726127],
+(B[m[32m+                [0.0, 0.8451542, -0.53452253],
+(B[m[32m+                [0.31622776, -0.50709254, -0.8017838_f32]
+(B[m[32m+            ])
+(B[m[32m+        );
+(B[m     }
+ }
+ 
+Diff in /Users/k_tanabe/Documents/Documents/security_project/cgmath-next/tests/matrix.rs:1174:
+             [-0.9486833, -0.16903086, -0.26726127, 0.0],
+             [0.0, 0.84515435, -0.53452253, 0.0],
+             [0.31622776, -0.5070926, -0.8017838, 0.0],
+[31m-            [3.1622782, -0.84515476, 26.726126, 1.0_f32]
+(B[m[32m+            [3.1622782, -0.84515476, 26.726126, 1.0_f32],
+(B[m         ]);
+         assert_ulps_eq!(expected, m);
+ 
+Diff in /Users/k_tanabe/Documents/Documents/security_project/cgmath-next/tests/matrix.rs:1194:
+             [0.9486833, -0.16903086, 0.26726127, 0.0],
+             [0.0, 0.84515435, 0.53452253, 0.0],
+             [-0.31622776, -0.5070926, 0.8017838, 0.0],
+[31m-            [-3.1622782, -0.84515476, -26.726126, 1.0_f32]
+(B[m[32m+            [-3.1622782, -0.84515476, -26.726126, 1.0_f32],
+(B[m         ]);
+         assert_ulps_eq!(expected, m);
+ 
+Diff in /Users/k_tanabe/Documents/Documents/security_project/cgmath-next/tests/transform.rs:94:
+     let center = Point3::new(0.0f64, 0.0, 0.0);
+     let up = Vector3::new(1.0f64, 0.0, 0.0);
+     let t: Decomposed<Vector3<f64>, Quaternion<f64>> = Transform::look_at(eye, center, up);
+[31m-    assert_ulps_eq!(t, Decomposed::<Vector3<f64>, Quaternion<f64>>::look_at(eye, center, up));
+(B[m[32m+    assert_ulps_eq!(
+(B[m[32m+        t,
+(B[m[32m+        Decomposed::<Vector3<f64>, Quaternion<f64>>::look_at(eye, center, up)
+(B[m[32m+    );
+(B[m     let point = Point3::new(1.0f64, 0.0, 0.0);
+     let view_point = Point3::new(0.0f64, 1.0, 5.0);
+     assert_ulps_eq!(&t.transform_point(point), &view_point);
+Diff in /Users/k_tanabe/Documents/Documents/security_project/cgmath-next/tests/transform.rs:106:
+     let center = Point3::new(0.0f64, 0.0, 0.0);
+     let up = Vector3::new(1.0f64, 0.0, 0.0);
+     let t: Decomposed<Vector3<f64>, Quaternion<f64>> = Transform::look_at_lh(eye, center, up);
+[31m-    assert_ulps_eq!(t, Decomposed::<Vector3<f64>, Quaternion<f64>>::look_at_lh(eye, center, up));
+(B[m[32m+    assert_ulps_eq!(
+(B[m[32m+        t,
+(B[m[32m+        Decomposed::<Vector3<f64>, Quaternion<f64>>::look_at_lh(eye, center, up)
+(B[m[32m+    );
+(B[m     let point = Point3::new(1.0f64, 0.0, 0.0);
+     let view_point = Point3::new(0.0f64, 1.0, 5.0);
+     assert_ulps_eq!(&t.transform_point(point), &view_point);
+Diff in /Users/k_tanabe/Documents/Documents/security_project/cgmath-next/tests/transform.rs:129:
+     let center = Point3::new(0.0f64, 0.0, 0.0);
+     let up = Vector3::new(1.0f64, 0.0, 0.0);
+     let t: Decomposed<Vector3<f64>, Quaternion<f64>> = Transform::look_at_rh(eye, center, up);
+[31m-    assert_ulps_eq!(t, Decomposed::<Vector3<f64>, Quaternion<f64>>::look_at_rh(eye, center, up));
+(B[m[32m+    assert_ulps_eq!(
+(B[m[32m+        t,
+(B[m[32m+        Decomposed::<Vector3<f64>, Quaternion<f64>>::look_at_rh(eye, center, up)
+(B[m[32m+    );
+(B[m     let point = Point3::new(1.0f64, 0.0, 0.0);
+     let view_point = Point3::new(0.0f64, 1.0, -5.0);
+     assert_ulps_eq!(&t.transform_point(point), &view_point);
+EXIT_CODE:1
