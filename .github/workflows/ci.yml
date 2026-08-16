@@ -146,8 +146,16 @@ jobs:
       - name: serde/mint/rand feature-leak check (both directions)
         run: |
           set +e
-          NO_FEATURES=$(cargo tree -e normal 2>&1)
-          ALL_FEATURES=$(cargo tree -e normal --all-features 2>&1)
+          # `cargo tree` regenerates the lockfile on a fresh checkout (no
+          # Cargo.lock is committed for this library) and its "Updating /
+          # Locking / Adding X (available: Y)" preamble mentions optional
+          # dependencies like rand/mint even when they're NOT enabled --
+          # that preamble text isn't reliably confined to one stream, so
+          # slice the captured output down to the actual tree (starting
+          # at the crate's own header line) before grepping it, instead
+          # of grepping the raw capture.
+          NO_FEATURES=$(cargo tree -e normal 2>&1 | sed -n '/^cgmath-next /,$p')
+          ALL_FEATURES=$(cargo tree -e normal --all-features 2>&1 | sed -n '/^cgmath-next /,$p')
           FAIL=0
           for dep in serde mint rand; do
             if echo "$NO_FEATURES" | grep -qiE "([[:space:]]|^)${dep} v"; then
