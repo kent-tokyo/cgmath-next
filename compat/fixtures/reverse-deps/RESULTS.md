@@ -1,13 +1,14 @@
 # Reverse-dependency migration fixtures (AGENTS.md §14)
 
-3 real crates.io reverse-dependencies of `cgmath` (of 280 total, filtered
+4 real crates.io reverse-dependencies of `cgmath` (of 280 total, filtered
 to `normal`-kind dependencies on `^0.18`/`^0.18.0`), spanning graphics,
-CAD/geometry, and GPU-layout/serialization categories, downloaded as their
-published tarballs (same method as the crate's own provenance import) and
-tested both against real `cgmath = "0.18.0"` (baseline) and against
-`cgmath-next` via `cgmath = { package = "cgmath-next", path = "../../../.." }`.
+CAD/geometry, GPU-layout/serialization, and multi-backend-abstraction
+categories, downloaded as their published tarballs (same method as the
+crate's own provenance import) and tested both against real
+`cgmath = "0.18.0"` (baseline) and against `cgmath-next` via
+`cgmath = { package = "cgmath-next", path = "../../../.." }`.
 
-This meets AGENTS.md §20's "3件以上" alpha gate. It does not yet meet the
+This meets AGENTS.md §20's "3件以上" alpha gate. 1 more is needed for the
 5-crate stable gate.
 
 **Not vendored into this repository.** The downloaded sources (and this
@@ -29,6 +30,7 @@ tar xzf x.crate --strip-components=1 -C <dest>
 | `arcball` | 1.1.0 | `5b32e1408f89d00ea90c028c97f928361b9b2dfb7ce122819704726bb6862235` |
 | `crevice` | 0.20.1 | `b3f5b73a35775798e5a941a98d3eda7dd6ac6ba4715bd3cce8fef6bdf1a74c91` |
 | `truck-base` | 0.5.0 | `4c279de9e92e5dc20a188deb0bb9a4bd421a6a185e57e03e19025e84a36c5a05` |
+| `vector-traits` | 0.6.2 | `f228b57b00a0cf34733af60bf2f071c90bf0f6432499c1f9cfd16d13bb4225a5` |
 
 ---
 
@@ -167,4 +169,106 @@ lines, all in `truck-base`'s own code, none in `cgmath-next`):
  use crate::cgmath64::*;
 -use cgmath::AbsDiffEq;
 +use ::cgmath::AbsDiffEq;
+```
+
+---
+
+```
+crate name: vector-traits
+original version: 0.6.2
+features: cgmath (optional feature, `cargo test --features cgmath --no-default-features`)
+original result: pass (13 tests, 0 failed)
+cgmath-next result: pass, no changes (13 tests, 0 failed)
+source changes required: none
+failure reason: n/a
+```
+
+`vector-traits` provides trait-based abstractions (`GenericVector2`,
+`GenericVector3`, `HasXY`/`HasXYZ`, etc.) implemented identically over
+`cgmath`, `glam`, `nalgebra`, and `macaw` types, so a caller can write
+generic code once and plug in whichever backend. Like `matext4cgmath` in
+the `truck-base` case above, it does `pub use cgmath;` (`src/lib.rs:137`)
+-- publicly re-exporting its own `cgmath` dependency. Picked specifically
+to stress-test the "extension crate re-exports cgmath" pattern again, this
+time with a compile-time check of whether values actually belong to the
+same type system, not just "did it compile."
+
+**Migration test (patch `vector-traits`' own `Cargo.toml`, same method as
+the other 3 fixtures):** clean pass, 13/13, zero source changes. Unlike
+`truck-base`, no ambiguity error at all -- `vector-traits` doesn't glob-
+import a second `cgmath` into the same scope as its own re-export, so
+there's nothing to collide.
+
+**Compile-time type-identity check (AGENTS.md doesn't require this, but it's
+the sharper question "does it compile" doesn't answer):** a separate small
+wrapper crate, `type-identity-check`, depends on **both** `cgmath-next`
+directly (`package = "cgmath-next"`) **and** the migrated `vector-traits`
+copy above (which itself now depends on the exact same `cgmath-next` via
+an identical `path`). It constructs a `Vector3<f32>` through its own direct
+`cgmath-next` dependency and passes it, with zero conversion, into a
+function generic over `vector-traits`' `GenericVector3` trait:
+
+```rust
+fn takes_generic_vector3<T: GenericVector3>(v: T) -> T::Scalar {
+    v.x() + v.y() + v.z()
+}
+let v: cgmath::Vector3<f32> = cgmath::Vector3::new(1.0, 2.0, 3.0);
+let sum = takes_generic_vector3(v); // no .into(), no wrapper
+```
+
+**This compiles and runs (`sum == 6.0`).** Rust trait resolution is exact
+nominal-type matching, not structural -- this is not possible unless the
+compiler considers the wrapper's own `cgmath::Vector3<f32>` and
+`vector-traits`' internal `crate::cgmath::Vector3<f32>` the *identical*
+type. Cargo unified the two `path` dependencies (the wrapper's direct one,
+`vector-traits`'s transitive one) pointing at the same source into one
+crate instance in the build graph, exactly as expected when both point at
+the identical path. This empirically confirms `docs/migration.md`'s
+"Option 1: get the extension crate to depend on `cgmath-next` too" claim,
+which had previously only been argued, not demonstrated.
+
+**Negative control -- same wrapper code, but against the *unmigrated*
+`vector-traits` 0.6.2 from crates.io (still on real `cgmath ^0.18`)
+instead of the patched copy:** fails to compile, as expected:
+
+```
+error[E0277]: the trait bound `cgmath::Vector3<f32>: GenericVector3` is not satisfied
+   |
+29 |     let sum = takes_generic_vector3(v);
+   |               --------------------- ^ the trait `GenericVector3` is not implemented for `cgmath::Vector3<f32>`
+   = note: there are multiple different versions of crate `cgmath` in the dependency graph
+help: the following other types implement trait `GenericVector3`
+   --> .../vector-traits-0.6.2/src/cgmath_impl.rs:533:9
+   |
+   |         `vector_traits::cgmath::Vector3<f32>`
+```
+
+rustc's own diagnostic states the finding better than any prose could:
+*"there are multiple different versions of crate `cgmath` in the
+dependency graph."* This is not an ambiguity error (`E0659`, the
+`truck-base` failure mode) -- it's a plain trait-bound failure, because
+without migrating, `vector-traits`' impls target *its own* (real,
+unrenamed) `cgmath::Vector3<f32>`, a nominally different type from this
+wrapper's `cgmath-next`-backed `Vector3<f32>`, even though both are
+structurally identical and both display as "`cgmath::Vector3<f32>`" in
+diagnostics.
+
+**Generalizable finding, distinct from `truck-base`'s:** renaming *only
+your own* direct `cgmath` dependency does not retroactively make a
+third-party generic-trait crate's impls apply to your values, unless that
+crate has *also* migrated. This is different in kind from `truck-base`'s
+silent-ambiguity trap -- here the compiler refuses outright (E0277), it
+never silently compiles with the wrong type. The safe, always-available
+fallback when an extension crate hasn't migrated: convert through a
+common representation both crates agree on (e.g. `Into<[S; 3]>`, which
+both real `cgmath` and `cgmath-next` implement identically per
+`docs/api-inventory.md`'s zero-diff result), not a direct trait call.
+
+Not vendored, same reasoning as above; reproduce with:
+
+```bash
+UA="cgmath-next-research/0.1 (<your email>)"
+curl -sL -A "$UA" "https://crates.io/api/v1/crates/vector-traits/0.6.2/download" -o x.crate
+tar xzf x.crate --strip-components=1 -C <dest>
+# then patch [dependencies.cgmath] in Cargo.toml to package="cgmath-next", path="<repo root>"
 ```

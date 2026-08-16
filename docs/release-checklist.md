@@ -39,7 +39,7 @@ approval (§21) -- this document does not constitute that approval.
 | 3 | 残存unsafeのinvariantが文書化されている | met -- `docs/unsafe-audit.md` |
 | 4 | release対象unsafe testがMiriで通る | met for what exists (`tests/soundness/`); `UNSAFE-001`/`003`/`004` don't have dedicated Miri regression tests, only the audit's evidence |
 | 5 | serde、mint、rand、swizzleの互換性が検証されている | partially -- individual-feature `cargo test` passes for all 4 (`docs/compatibility.md`); no dedicated round-trip/format-stability test beyond what upstream's own tests already cover |
-| 6 | migration fixtureが5件以上通る | **not met** -- 3/5 (`arcball`, `crevice`, `truck-base`) |
+| 6 | migration fixtureが5件以上通る | **not met** -- 4/5 (`arcball`, `crevice`, `truck-base`, `vector-traits`) |
 | 7 | MSRVが実測・文書化されている | met -- `docs/msrv.md`, though it documents that the number is driven by transitive deps and will drift |
 | 8 | 3 platformでCIが通る | met -- verified by real runs against `origin/main`: [run 1](https://github.com/kent-tokyo/cgmath-next/actions/runs/31937609325) caught a real `cargo audit` lockfile bug (fixed, see `825d7f5`), [run 2](https://github.com/kent-tokyo/cgmath-next/actions/runs/31937821604) green across all 9 jobs except the pre-documented informational `fmt` job |
 | 9 | `cargo audit`と`cargo deny`の結果が説明されている | met -- `deny.toml` added, `cargo deny --all-features check` run clean (advisories/bans/licenses/sources all ok); `security` CI job wires this in going forward |
@@ -52,11 +52,11 @@ approval (§21) -- this document does not constitute that approval.
 1. Resolve or formally accept `UNSAFE-002`'s risk (either rewrite the
    tuple transmutes as safe field-by-field code, or get a stronger
    verification than `-Zrandomize-layout` provides).
-2. 2 more reverse-dependency fixtures (5 total). Candidates from the
-   filtered `^0.18`/`^0.18.0` normal-kind reverse-dependency list not yet
-   used: `three-d` (popular rendering engine, larger build), `vector-
-   traits` (trait abstraction crate, likely light), `boostvoronoi_core`
-   (geometry/CAD), `smithay` (Wayland compositor, heavier build).
+2. 1 more reverse-dependency fixture (5 total; `vector-traits` done, see
+   row 6). Candidates from the filtered `^0.18`/`^0.18.0` normal-kind
+   reverse-dependency list not yet used: `three-d` (popular rendering
+   engine, larger build), `boostvoronoi_core` (geometry/CAD), `smithay`
+   (Wayland compositor, heavier build).
 3. ~~`cargo audit` and `cargo deny check`~~ -- done, see row 9 above.
 4. ~~CI: 3-platform matrix~~ -- configured in `.github/workflows/ci.yml`;
    still needs a real run against `origin` to count as *verified*, not

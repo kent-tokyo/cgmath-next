@@ -60,7 +60,15 @@ The two real fixes, in order of preference:
 
 1. **Get the extension crate to depend on `cgmath-next` too**, if it's
    actively maintained. This is the clean fix and avoids the ambiguity
-   entirely.
+   entirely -- confirmed empirically, not just argued: a compile-time
+   check in the `vector-traits` reverse-dependency fixture shows that once
+   an extension crate migrates, values constructed via your own direct
+   `cgmath-next` dependency are the exact same nominal type as what the
+   extension crate's own trait impls expect, no conversion needed (see
+   `compat/fixtures/reverse-deps/RESULTS.md`). The same fixture also shows
+   what happens if it *hasn't* migrated yet: not a silent type split, but
+   a plain `E0277` trait-bound-not-satisfied error -- the compiler refuses
+   outright rather than compiling with the wrong type.
 2. **If you can't wait for that**, qualify every one of *your own crate's*
    unqualified `cgmath::...` references (including inside your own
    macros, if any) with the absolute path `::cgmath::...`, so they
