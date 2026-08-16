@@ -44,7 +44,7 @@ approval (§21) -- this document does not constitute that approval.
 | 8 | CI passes on 3 platforms | met -- verified by real runs against `origin/main`, and it's caught 2 real issues so far (not just "ran green"): [run](https://github.com/kent-tokyo/cgmath-next/actions/runs/31937609325) 1 found a `cargo audit` lockfile bug (fixed, `825d7f5`); the [layout-guard commit's run](https://github.com/kent-tokyo/cgmath-next/actions/runs/31940302025) found the `miri` job's `--lib` sweep hitting Miri's own known float non-determinism in `slerp` for the first time (fixed by narrowing that step's scope, not by weakening any test, `f155eaf`; [confirmed green](https://github.com/kent-tokyo/cgmath-next/actions/runs/31940574715) after). Otherwise green across all blocking jobs except the pre-documented informational `fmt` job |
 | 9 | `cargo audit` and `cargo deny` results are explained | met -- `deny.toml` added, `cargo deny --all-features check` run clean (advisories/bans/licenses/sources all ok); `security` CI job wires this in going forward |
 | 10 | Known compatibility gaps are published | met -- `docs/compatibility.md`, `docs/unsafe-audit.md` both list open gaps |
-| 11 | Release checklist is complete | this document; not all rows above are checked yet |
+| 11 | Release checklist is complete | 10/12 rows fully "met" as of this update. Row 2 (`UNSAFE-002`) is "guarded" by design, not "met" -- tuple layout is language-unspecified and no amount of further work in this repo can change that, only removing the reference-returning conversions (a public API change) would, and that's explicitly out of scope. Row 12 (human publish approval) is intentionally still pending -- this document doesn't grant it, a human does |
 | 12 | Explicit human approval obtained before publish | pending -- not requested yet |
 
 ## Outstanding work before stable, in priority order
@@ -125,4 +125,13 @@ approval (§21) -- this document does not constitute that approval.
      concretely fails with `E0599: no method named `xy`` when the
      feature is off and builds cleanly when it's on. See
      `docs/compatibility.md`.
+
+   **All 6 items in this phase are now complete.** Post-completion
+   re-verification (same scope as requested -- public API diff, full
+   `cargo test`, `--all-features`, all 6 pairwise combinations, targeted
+   Miri (`tests/soundness`, `tests/matrix`, filtered `--lib`), all 5
+   reverse-dependency fixtures, blocking GitHub Actions jobs): all pass,
+   0 regressions, 0 unexplained differences. CI run
+   [31943457863](https://github.com/kent-tokyo/cgmath-next/actions/runs/31943457863)
+   (the swizzle-verification commit) green on every blocking job.
 7. Human review and explicit publish approval.
