@@ -187,20 +187,28 @@ ships, that's the trigger to insert `0.18.1-rc.1` and stop-and-report
 - [x] `publish.yml`: `permissions: contents: read` (least privilege) and
   a `concurrency: group: crates-io-publish, cancel-in-progress: false`
   block added. Commit `9c9df1f`.
-- [ ] **Not yet done:** `environment: crates-io` on the publish job,
-  gated by a required-reviewer protection rule. The environment must be
-  created in repo Settings > Environments first (with the repo owner as
-  required reviewer, and a deployment branch policy restricting it to
-  `main`) -- this is a repo-settings mutation outside git, blocked from
-  being done via API this session (denied by the operating agent's
-  permission classifier), needs the repo owner to do it directly. Until
-  this exists, `publish.yml` intentionally does **not** reference the
-  environment (see the `TODO` comment in that file) -- referencing an
-  unprotected/nonexistent environment would claim a safety gate that
-  isn't actually there.
 - [x] `UNSAFE-002` explicitly documented as an accepted permanent known
   limitation of the stable series, not an open item -- see row 2 of the
   stable table above. This update.
+
+**Phase 1 is complete** (user confirmation, 2026-08-16, CI green on
+`49d7dca`).
+
+**Deferred, not a stable blocker:** `environment: crates-io` on the
+publish job with a required-reviewer protection rule. This is additive
+hardening on top of what `publish.yml` already has (manual-dispatch-only
+trigger, typed version confirmation, an in-job dry-run before the real
+publish, least-privilege `permissions`, a `concurrency` group preventing
+overlapping publishes, and `Cargo.toml`'s `publish = ["crates-io"]`
+restricting the target registry) -- not a replacement for it. Per the
+user: a required-reviewer gate is most effective with a reviewer other
+than the person dispatching the workflow; self-review by a single
+maintainer adds a click, not much real safety. Since `cgmath-next`
+currently has one maintainer, this is deferred until an independent
+reviewer is available to name, rather than configured now with no
+practical effect. `publish.yml` keeps its `TODO` comment (not referencing
+the environment, since it doesn't exist) -- this is intentional and
+tracked as future work, not an unmet condition for `0.18.1` stable.
 
 ### RC decision
 
@@ -224,24 +232,58 @@ of the following happen:**
 - A real compatibility problem is reported against `alpha.1` by an
   external user.
 
+**Confirmed as of 2026-08-16 (`49d7dca`): no RC needed yet.** `git diff
+--stat v0.18.1-alpha.1..HEAD` shows zero changes under `src/` or
+`build.rs` -- every commit since the alpha tag is CI, publish-workflow,
+package metadata, README, issue templates, or the new `examples/` file.
+None of the RC triggers above have fired.
+
+### Scope freeze: in effect now
+
+As of 2026-08-16 (`49d7dca`), this repository is in the scope freeze
+defined above -- no new features, refactors, dependency changes, MSRV
+changes, or public API changes until `0.18.1` stable ships (or an RC
+trigger fires). Stop and report immediately if an urgent soundness or
+compatibility problem is found; otherwise no further code changes are
+expected before the stable-publish work below is explicitly requested.
+
 ### Timeline
 
-Keep `alpha.1` published as-is for a short observation window (days to
-~1 week) while this Phase 1 checklist completes, **and separately**
-while watching for alpha-user-reported issues. This window is
-time-gated, not effort-gated: finishing every checklist item above does
-**not** by itself authorize moving to stable early -- the point of the
-window is elapsed real-world exposure, which finishing infrastructure
-work faster cannot substitute for. Upstream/RustSec reply status is
+Not a fixed one-week ritual: `alpha.1` was never publicized, so a longer
+wait doesn't mechanically increase the odds of external reports arriving.
+Target: **around 2026-08-20**, contingent on no major issue surfacing
+against `alpha.1` in the meantime, **and** the user's own explicit
+instruction to proceed with the stable-publish work below -- reaching
+the date alone does not authorize it. Upstream/RustSec reply status is
 explicitly **not** part of this gate (see the project memory recorded
 2026-08-16 correcting an earlier, overly cautious version of this same
 plan).
 
-Before publishing `0.18.1` stable, still need:
-- The observation window to actually elapse.
-- No major soundness/compatibility report against `alpha.1`.
-- A final preflight from the packaged crate (same rigor as `alpha.1`'s:
-  `cargo package --list`, both dry-run variants, extract-and-test the
-  actual `.crate`).
-- Explicit human publish approval for stable specifically (not inherited
-  from the `alpha.1` approval).
+### Stable-publish work (do NOT start until explicitly instructed, on or after ~2026-08-20)
+
+1. `Cargo.toml` version -> `0.18.1`.
+2. Update `README.md`/`README_ja.md`/`README_zh.md`, `CHANGELOG.md`, and
+   this checklist to remove alpha-specific language.
+3. Keep `UNSAFE-002` documented as an accepted known limitation of
+   stable (already done, see row 2 above -- do not weaken this framing).
+4. Write stable release notes.
+5. Final preflight, same rigor as `alpha.1`'s:
+   - `cargo test`, `cargo test --all-features`, `cargo test --doc`
+   - `cargo package --list` (check for unexpected contents/bloat)
+   - `cargo publish --dry-run` and `cargo publish --dry-run --all-features`
+   - Extract the actual generated `.crate` and, from inside it, re-run
+     `cargo test`, `cargo test --all-features`, `cargo test --doc`
+   - Confirm all existing blocking CI jobs are green
+   - **Do NOT** re-run the full Miri suite, the full reverse-dependency
+     fixture set, or the 59-benchmark suite unless `src/` actually
+     changed -- none of that changed since `alpha.1`, so those stay at
+     their `alpha.1`-verified results.
+6. If the preflight fails, or `cargo package --list` shows unexpected
+   contents, **stop and report** -- do not fix-and-continue or publish
+   unilaterally.
+7. **Even after a clean preflight: do not run `cargo publish`, create a
+   tag, or create a GitHub Release.** Report the preflight results and
+   the exact commit SHA that would be published, and wait for explicit
+   separate approval before executing any of those three -- same
+   stop-and-report boundary as `alpha.1`'s publish, not inherited from
+   it.
