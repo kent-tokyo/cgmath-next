@@ -1,0 +1,102 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+    paths-ignore:
+      - "README.md"
+      - "CHANGELOG.md"
+  schedule:
+    # Catch dependency-driven breakage (MSRV drift, advisory-db updates)
+    # even with no code changes. See docs/msrv.md.
+    - cron: "0 0 * * 0"
+
+env:
+  RUST_BACKTRACE: 1
+  # docs/msrv.md: measured against today's dependency resolution, will
+  # need re-measuring (not just bumping) if this ever fails here.
+  MSRV: "1.71"
+
+jobs:
+  # AGENTS.md section 15, "通常CI". check/test/doc are blocking; fmt and
+  # clippy are informational only for now (baseline has pre-existing
+  # findings recorded in docs/baseline.md -- see the staged rollout plan
+  # there before flipping these to blocking with -D warnings).
+  test:
+    name: test (${{ matrix.os }}, ${{ matrix.toolchain }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        toolchain: [stable]
+        include:
+          - os: ubuntu-latest
+            toolchain: "1.71" # declared MSRV, see docs/msrv.md
+          - os: ubuntu-latest
+            toolchain: beta
+    continue-on-error: ${{ matrix.toolchain == 'beta' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: ${{ matrix.toolchain }}
+      - run: cargo check
+      - run: cargo check --no-default-features
+      - run: cargo test
+      - run: cargo test --all-features
+      - run: cargo test --doc
+
+  fmt:
+    name: fmt (informational -- see docs/baseline.md)
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt
+      - run: cargo fmt --check
+
+  clippy:
+    name: clippy (informational -- see docs/baseline.md)
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
+      # Not --all-targets: the inherited benches/ use the unstable
+      # `#[feature(test)]` harness and cannot build on stable at all,
+      # independent of any lint result -- see docs/baseline.md.
+      - run: cargo clippy --lib --tests --all-features
+
+  security:
+    name: cargo audit / cargo deny
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: rustsec/audit-check@v2
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - uses: EmbarkStudios/cargo-deny-action@v2
+        with:
+          arguments: --all-features
+
+  miri:
+    name: miri (targeted suite)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@nightly
+        with:
+          components: miri
+      # AGENTS.md section 15: a fast targeted suite runs normally; full
+      # scope is reserved for release candidates, not every push.
+      - name: swap_columns/swap_elements soundness regression
+        run: cargo miri test --test soundness
+      - name: representative matrix/vector conversion + unsafe-audited paths
+        run: cargo miri test --lib
