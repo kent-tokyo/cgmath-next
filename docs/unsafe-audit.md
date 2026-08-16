@@ -16,7 +16,7 @@ macro across 7-9 types. Each group lists every source line it covers.
 | ID | Pattern | Reachable in default/normal builds? | Can safe Rust replace it? | Status |
 |---|---|---|---|---|
 | UNSAFE-001 | repr(C) struct <-> fixed-size array transmute | yes | not without changing the public `From`/`AsRef`/`AsMut` API shape | audited sound |
-| UNSAFE-002 | repr(C) struct <-> homogeneous tuple transmute | yes | yes, at the cost of extra field-by-field code per arity | **flagged -- still unverified.** Confirmed empirically that `-Zrandomize-layout` does not randomize tuple layout at all (only structs/enums), so that tool cannot stress-test this entry either way (see detail below) |
+| UNSAFE-002 | repr(C) struct <-> homogeneous tuple transmute | yes | only the owned `Into<Tuple>` impl (already safe); `AsRef`/`AsMut`/`From<&_>` need a public API removal, see detail below | **flagged -- still unverified.** Confirmed empirically that `-Zrandomize-layout` does not randomize tuple layout at all (only structs/enums); independently corroborated as a known unresolved upstream issue, [`rustgd/cgmath#538`](https://github.com/rustgd/cgmath/issues/538) (open since 2021) |
 | UNSAFE-003 | `det_sub_proc_unsafe` (unchecked indexing) | yes, for `Matrix4::determinant` (unconditionally); no, for `Matrix4::invert`'s SIMD branch | yes, with a bounds-checked rewrite; likely no measurable cost given the caller already holds a `&Matrix4` | audited sound (see caveats) |
 | UNSAFE-004 | `mem::uninitialized` + external `simd` crate SIMD load/store | **no -- dead code** | irrelevant while dead; would need a full rewrite before ever enabling | dead code, do not enable as-is |
 
@@ -157,13 +157,46 @@ empirically stable, not language-guaranteed.
 **Tests:** `src/vector.rs`, `src/point.rs`, `src/quaternion.rs`
 `#[cfg(test)] mod tests` (pre-existing upstream unit tests, unmodified).
 
+**External corroboration:** this is not a novel finding of this session --
+upstream tracks the identical bug at
+[`rustgd/cgmath#538`](https://github.com/rustgd/cgmath/issues/538)
+("Unspecified behavior in `impl_tuple_conversions`"), open since
+2021-08-18, still open as of this writing. The issue quotes the exact same
+`AsRef`/`AsMut` transmute and the same Rust reference passage ("Tuples do
+not have any guarantees about their layout"). A commenter
+([`Mokuzzai`](https://github.com/rustgd/cgmath/issues/538#issuecomment-902028519))
+independently confirmed the bug spans the same surface this audit lists --
+`AsRef`/`AsMut`/`From<&_>`/`From<&mut _>` for every vector, point, and the
+quaternion -- and proposed a compile-/runtime layout check as a mitigation
+(not implemented upstream). A cgmath collaborator
+([`aloucks`](https://github.com/rustgd/cgmath/issues/538#issuecomment-950041311))
+concluded "those impls should be deprecated and then later removed in a
+subsequent release" -- i.e. upstream's own maintainer-level assessment
+independently agrees the only real fix is API removal, not a safe
+rewrite. No fix has landed in the ~5 years since.
+
+**Correction to the original audit's fix suggestion:** "replace with
+field-by-field construction" only applies to the *owned* `Into<Tuple>`
+impl, which is already safe (see the macro above -- it pattern-matches and
+rebuilds by value, no transmute). It does **not** apply to
+`AsRef`/`AsMut`/`From<&Tuple>`/`From<&mut Tuple>`: these return a
+*reference* borrowed from `self`'s own memory, which cannot be produced
+from freshly-constructed field values -- there is no safe-Rust way to
+hand back `&(S, S, S, S)` that aliases `&self`'s bytes without either a
+transmute or `self` already being stored as that tuple internally
+(a representation change, not just a body rewrite). This matches
+upstream's own conclusion: the only real fix is removing the
+reference-returning impls, which is a public API change and therefore
+AGENTS.md stop-and-report territory, not something to do unilaterally.
+
 **Status:** still flagged, not fixed, and **not meaningfully re-verified**
 despite the `-Zrandomize-layout` attempt -- see above for why that attempt
-doesn't apply to tuples. The only mechanical way to close this out found so
-far in this session's toolset is: replace the tuple transmutes with
-explicit field-by-field construction (safe, no perf cliff expected at
-`-O`), which is the same recommendation as the original audit, now with
-more confidence that no cheaper verification shortcut exists.
+doesn't apply to tuples. Independently corroborated as a known, unresolved,
+maintainer-acknowledged upstream issue (`rustgd/cgmath#538`), not something
+this fork introduced or overlooked. The only real fix -- removing
+`AsRef<Tuple>`/`AsMut<Tuple>`/`From<&Tuple>`/`From<&mut Tuple>` -- is a
+public API removal and out of scope for this phase; recommended as a
+Yellow/Red decision for a future phase rather than attempted here.
 
 ---
 

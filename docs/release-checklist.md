@@ -35,7 +35,7 @@ approval (§21) -- this document does not constitute that approval.
 | # | Condition | Status |
 |---|---|---|
 | 1 | 未説明のpublic API削除がゼロ | met -- zero API diff |
-| 2 | 既知のsafe-to-UB経路がゼロ | **not met** -- `UNSAFE-002` (tuple-layout transmute) remains unverified; `-Zrandomize-layout` was attempted and confirmed not to cover this case (see `docs/unsafe-audit.md`) |
+| 2 | 既知のsafe-to-UB経路がゼロ | **not met** -- `UNSAFE-002` (tuple-layout transmute) remains unverified; `-Zrandomize-layout` was attempted and confirmed not to cover this case; independently corroborated as an unresolved upstream issue since 2021 (`rustgd/cgmath#538`), whose own collaborator concluded the only real fix is removing the reference-returning impls -- a public API change, out of scope here (see `docs/unsafe-audit.md`) |
 | 3 | 残存unsafeのinvariantが文書化されている | met -- `docs/unsafe-audit.md` |
 | 4 | release対象unsafe testがMiriで通る | met for what exists (`tests/soundness/`); `UNSAFE-001`/`003`/`004` don't have dedicated Miri regression tests, only the audit's evidence |
 | 5 | serde、mint、rand、swizzleの互換性が検証されている | partially -- individual-feature `cargo test` passes for all 4 (`docs/compatibility.md`); no dedicated round-trip/format-stability test beyond what upstream's own tests already cover |
