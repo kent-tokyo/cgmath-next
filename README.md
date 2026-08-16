@@ -1,6 +1,6 @@
 # cgmath-next
 
-[![License](https://img.shields.io/crates/l/cgmath-next.svg)](https://github.com/kent-tokyo/cgmath-next/blob/main/LICENSE)
+[![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](https://github.com/kent-tokyo/cgmath-next/blob/main/LICENSE)
 
 A maintained, soundness-focused, source-compatible successor to cgmath 0.18.
 
