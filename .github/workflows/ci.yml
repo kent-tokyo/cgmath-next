@@ -126,6 +126,10 @@ jobs:
             echo "::error::expected E0599 in build output, not found"
             exit 1
           fi
+          if ! echo "$OUTPUT" | grep -q "no method"; then
+            echo "::error::expected 'no method' in build output, not found"
+            exit 1
+          fi
           if ! echo "$OUTPUT" | grep -q "xy"; then
             echo "::error::expected method name 'xy' in build output, not found"
             exit 1
@@ -133,6 +137,35 @@ jobs:
       - name: swizzle-off positive control (must succeed with the feature on)
         working-directory: compat/fixtures/swizzle-off
         run: cargo build --features cgmath-next/swizzle
+      # A check that only asserts absence can pass vacuously if it's
+      # pointed at the wrong thing (e.g. a typo in the dependency name),
+      # so this asserts both directions: none of serde/mint/rand appear
+      # in the default dependency graph, and all three DO appear with
+      # --all-features -- proving the check itself can actually detect
+      # a leak, not just that it found nothing.
+      - name: serde/mint/rand feature-leak check (both directions)
+        run: |
+          set +e
+          NO_FEATURES=$(cargo tree -e normal 2>&1)
+          ALL_FEATURES=$(cargo tree -e normal --all-features 2>&1)
+          FAIL=0
+          for dep in serde mint rand; do
+            if echo "$NO_FEATURES" | grep -qiE "([[:space:]]|^)${dep} v"; then
+              echo "::error::'$dep' appears in the dependency graph with no features enabled -- leak"
+              FAIL=1
+            fi
+            if ! echo "$ALL_FEATURES" | grep -qiE "([[:space:]]|^)${dep} v"; then
+              echo "::error::'$dep' does NOT appear in the --all-features dependency graph -- the check above would pass vacuously"
+              FAIL=1
+            fi
+          done
+          if [ "$FAIL" -ne 0 ]; then
+            echo "--- no-features tree ---"
+            echo "$NO_FEATURES"
+            echo "--- all-features tree ---"
+            echo "$ALL_FEATURES"
+            exit 1
+          fi
 
   miri:
     name: miri (targeted suite)
