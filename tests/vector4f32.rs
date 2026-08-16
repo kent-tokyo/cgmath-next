@@ -178,22 +178,6 @@ mod test_magnitude {
 
         assert_eq!(a.magnitude(), a_res);
         assert_eq!(b.magnitude(), b_res);
-
-        #[cfg(feature = "simd")]
-        {
-            let a = Vector4::new(1f32, 4f32, 9f32, 16f32);
-            assert_ulps_eq!(a.sqrt_element_wide(), Vector4::new(1f32, 2f32, 3f32, 4f32));
-            assert_relative_eq!(
-                a.sqrt_element_wide().recip_element_wide(),
-                Vector4::new(1f32, 1f32 / 2f32, 1f32 / 3f32, 1f32 / 4f32),
-                max_relative = 0.005f32
-            );
-            assert_relative_eq!(
-                a.rsqrt_element_wide(),
-                Vector4::new(1f32, 1f32 / 2f32, 1f32 / 3f32, 1f32 / 4f32),
-                max_relative = 0.005f32
-            );
-        }
     }
 }
 

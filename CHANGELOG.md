@@ -48,8 +48,15 @@ as part of the faithful 0.18.0 import (see `docs/provenance.md`).
    `s.get_unchecked(i)`); confirmed via release-build disassembly to
    compile to byte-identical machine code to the unchecked version, i.e.
    zero cost, not an estimate. Renamed to `det_sub_proc` and no longer an
-   `unsafe fn` — this pattern is fully removed from `docs/unsafe-audit.md`,
-   which now tracks 3 remaining unsafe pattern groups instead of 4.
+   `unsafe fn` — the crate now has zero remaining `unsafe fn`.
+ - **UNSAFE-004 (`mem::uninitialized` + `simd` crate load/store) is
+   resolved by deletion.** `src/quaternion_simd.rs` and
+   `src/vector_simd.rs` — private, permanently unreachable from any
+   declared Cargo feature — are removed, along with their `mod`
+   declarations, the now-unused `impl_operator_simd!` macro, and a test
+   block referencing their methods. Zero public API diff confirmed
+   before/after. `docs/unsafe-audit.md` now tracks 2 remaining unsafe
+   pattern groups (`UNSAFE-001`, `UNSAFE-002`) instead of 4.
  - Added a dedicated Miri regression suite for UNSAFE-001 (fixed-size-array
    reference conversions), `tests/soundness/array_conversions.rs`: covers
    `AsRef`/`AsMut`/`From<&[..]>`/`From<&mut [..]>` for `Vector1..4`,

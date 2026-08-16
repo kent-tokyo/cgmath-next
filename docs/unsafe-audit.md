@@ -18,7 +18,7 @@ macro across 7-9 types. Each group lists every source line it covers.
 | UNSAFE-001 | repr(C) struct <-> fixed-size array transmute | yes | not without changing the public `From`/`AsRef`/`AsMut` API shape | audited sound |
 | UNSAFE-002 | repr(C) struct <-> homogeneous tuple transmute | yes | only the owned `Into<Tuple>` impl (already safe); `AsRef`/`AsMut`/`From<&_>` need a public API removal, see detail below | **guarded and audited.** A runtime layout check (`tuple_layout_matches!`) now runs before every transmute in this category, panicking instead of transmuting on a layout mismatch -- verified via Miri, disassembly (confirmed zero-cost when layout matches), and a negative-control test. Not a language-level soundness proof -- see the feasibility-study section below for exactly what is and isn't established |
 | UNSAFE-003 | `det_sub_proc` (was `det_sub_proc_unsafe`, unchecked indexing) | n/a -- no longer `unsafe` | **done.** Replaced with bounds-checked indexing; release-build disassembly confirmed byte-identical machine code to the old unchecked version, i.e. zero cost, not just "likely" | **resolved -- removed from the unsafe inventory** |
-| UNSAFE-004 | `mem::uninitialized` + external `simd` crate SIMD load/store | **no -- dead code** | irrelevant while dead; would need a full rewrite before ever enabling | dead code, do not enable as-is |
+| UNSAFE-004 | `mem::uninitialized` + external `simd` crate SIMD load/store | **no -- was dead code** | n/a | **resolved -- deleted.** `src/quaternion_simd.rs` and `src/vector_simd.rs` (the only files containing this pattern) are removed, not just left disabled. See detail below |
 
 ---
 
@@ -483,60 +483,81 @@ UNSAFE-004), not 4.
 
 ---
 
-### UNSAFE-004: `mem::uninitialized` + external `simd` crate load/store
+### UNSAFE-004: `mem::uninitialized` + external `simd` crate load/store (resolved -- deleted)
 
-**Files:** `src/quaternion_simd.rs:28` (`impl From<Simdf32x4> for
-Quaternion<f32>`); `src/vector_simd.rs:30,246,326` (`impl From<Simdf32x4>
-for Vector4<f32>`, `impl From<Simdi32x4> for Vector4<i32>`, `impl
-From<Simdu32x4> for Vector4<u32>`).
+**A one-time disposition decision, explicitly scoped:** don't force a Miri
+test onto genuinely unreachable code (there is nothing to exercise it
+with), and don't keep treating "audited" as equivalent to "acceptable to
+leave in place" for a pattern built on `mem::uninitialized`, a
+deprecated-since-1.39 API that is unsound for most types the moment it's
+called, independent of whether the specific instantiation here happened to
+be defensible. Since this code was private, unreachable from any declared
+Cargo feature (`simd` was never a resolvable feature -- no `[features]
+simd = [...]` entry ever existed), and would have required hand-editing
+`Cargo.toml` and inventing a feature from scratch to ever compile, deletion
+was the first candidate per that policy, and it's what happened.
 
-**Purpose:** construct a `Quaternion<f32>`/`Vector4<{f32,i32,u32}>` from a
-128-bit SIMD register by allocating uninitialized storage, then
-immediately overwriting all of it via the SIMD `store` intrinsic.
+**Deleted this session:** `src/quaternion_simd.rs` (157 lines) and
+`src/vector_simd.rs` (417 lines) in full -- these were the only files
+containing the `mem::uninitialized`-based SIMD load/store pattern. Also
+removed as a direct, required consequence (not scope creep: leaving them
+would either dangle or immediately trip `unused_macro_rules`/reference a
+deleted file):
+- `src/lib.rs`: `extern crate simd;` and the `mod quaternion_simd;`/
+  `mod vector_simd;` declarations.
+- `src/macros.rs`: the `impl_operator_simd!` macro, which had no callers
+  left anywhere in the crate once the two files above were gone.
+- `tests/vector4f32.rs`: a `#[cfg(feature = "simd")]` test block exercising
+  `Vector4::sqrt_element_wide`/`recip_element_wide`/`rsqrt_element_wide`,
+  methods that existed only in the now-deleted `vector_simd.rs` and would
+  no longer resolve.
 
-**Safety invariant (as written):** every byte of `ret` must be written by
-`f.store(...)` before any read of `ret` -- which holds here, `store` writes
-all 4 elements unconditionally.
+**Deliberately left alone (still dead, but out of this item's scope --
+not `unsafe`, not this pattern, and touching them means auditing unrelated
+macro infrastructure used far beyond this feature):**
+- `src/lib.rs:53`, `#![cfg_attr(feature = "simd", feature(specialization))]`
+- `src/macros.rs`'s `default_fn!` macro's `#[cfg(feature = "simd")]` branch
+  (its `#[cfg(not(feature = "simd"))]` branch is the one actually used, in
+  29 call sites across `vector.rs`/`quaternion.rs`/`macros.rs` -- unrelated
+  to `mem::uninitialized`, contains no `unsafe`).
+- `src/matrix.rs`'s two `#[cfg(feature = "simd")]` dead branches (an
+  alternate `Matrix4::invert` using the now-safe `det_sub_proc`, and an
+  alternate `Mul<Vector4<S>> for Matrix4<S>`) -- neither contains
+  `unsafe`, both already correctly documented as dead code before this
+  session, unaffected by this deletion.
+- `Cargo.toml`'s commented-out `#simd = { version = "0.2", optional = true }`
+  line and its "disabled indefinitely" comment -- this is upstream's own
+  historical note (see `docs/provenance.md`), left as-is rather than
+  scrubbed, same treatment given to other inherited-but-inert content.
 
-**Is this code reachable?** **No, in any standard build.** Both files are
-gated `#[cfg(feature = "simd")]` (`src/lib.rs:103,108`). Confirmed in this
-session's feature inventory (`docs/compatibility.md`) that `simd` is not a
-resolvable Cargo feature at all in 0.18.0 -- there is no `[features] simd =
-[...]` entry, and the `simd` optional dependency itself is commented out in
-`Cargo.toml` (`#simd = { version = "0.2", optional = true }`, "disabled
-indefinitely" per the adjacent comment). Enabling this code would require
-both hand-editing `Cargo.toml` to re-add a `simd = "0.2"` dependency *and*
-inventing a `simd` Cargo feature that doesn't exist upstream -- not
-something a normal `cargo build --features ...` invocation can reach.
+**Verification performed:**
+- `cargo build --all-features` / `cargo test --all-features`: 320/320
+  pass, 0 regressions (same count as before this deletion -- nothing in
+  the deleted files was ever compiled or counted in any real build).
+- `cargo clippy --lib --tests --all-features`: no new warnings; in
+  particular, no `unused_macro_rules` warning, confirming
+  `impl_operator_simd!` had no remaining callers before it was removed
+  (if it had, clippy/rustc would have flagged an unresolved macro
+  reference instead) and no unused-macro warning was introduced.
+- `cargo +nightly miri test --test soundness` (36/36) and
+  `cargo +nightly miri test --test matrix` (86/87, the 1 failure is the
+  pre-documented `rotate_from_euler` float non-determinism, unrelated):
+  unaffected, same results as before this deletion.
+- All 6 pairwise feature combinations plus the plain `--no-default-features`
+  build: 0 failures across all 7 configurations.
+- **Public API diff:** regenerated the rustdoc JSON and re-diffed the
+  `cgmath.*`-namespace path list against the pristine 0.18.0 baseline --
+  **zero diff, before and after this deletion.** This confirms what the
+  reachability analysis already implied: none of the deleted `pub fn`s
+  (`sqrt_element_wide` etc.) were ever part of the compiled public API
+  surface under any real feature combination, so their removal changes
+  nothing observable from outside the crate.
 
-**Caller requirements:** N/A while unreachable.
-
-**Can safe Rust replace it?** Irrelevant while dead. If this were ever
-revived, `mem::uninitialized` is deprecated (since Rust 1.39, in favor of
-`MaybeUninit`) and is documented to be unsound for most types the moment
-it's called, even before any read -- for `f32`/`i32`/`u32` arrays
-specifically it happens to be one of the few cases the old API could
-arguably get away with (no validity invariant beyond bit pattern), but it
-should still be rewritten with `MaybeUninit` rather than kept as-is if
-revived.
-
-**Miri coverage:** none -- cannot be reached without a manual
-`Cargo.toml`/feature edit this session did not make.
-
-**Tests:** none (unreachable).
-
-**Status:** dead code, flagged rather than fixed or deleted this session.
-AGENTS.md's initial scope excludes "SIMDの全面再設計" (SIMD redesign), and
-this is the whole reason that exclusion exists -- the `simd` crate
-integration was already "disabled indefinitely" by upstream before 0.18.0
-shipped. Recommend for a future phase: either delete
-`quaternion_simd.rs`/`vector_simd.rs` and the dead `#[cfg(feature =
-"simd")]` gates entirely (they cannot currently be exercised, tested, or
-even compiled without external changes), or, if SIMD support is wanted
-later, rewrite from scratch against a maintained SIMD crate with
-`MaybeUninit`. Not deleting in this session because removing source files
-wholesale is a bigger decision than this checkpoint's scope, and doing so
-quietly would read as more invasive than what was asked for.
+**Status:** resolved. Deleted, not just left flagged -- the crate no
+longer contains a `mem::uninitialized` call anywhere
+(`grep -rn "mem::uninitialized" src/` returns nothing). Remaining
+`#[cfg(feature = "simd")]` dead branches elsewhere in the crate (listed
+above) contain no `unsafe` and are out of this audit's scope.
 
 ---
 

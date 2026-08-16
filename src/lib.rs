@@ -66,9 +66,6 @@ extern crate rand;
 #[macro_use]
 extern crate serde;
 
-#[cfg(feature = "simd")]
-extern crate simd;
-
 // Re-exports
 
 pub use approx::*;
@@ -100,13 +97,7 @@ mod structure;
 mod matrix;
 mod quaternion;
 
-#[cfg(feature = "simd")]
-mod quaternion_simd;
-
 mod vector;
-
-#[cfg(feature = "simd")]
-mod vector_simd;
 
 mod angle;
 mod euler;
