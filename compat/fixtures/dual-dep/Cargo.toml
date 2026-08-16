@@ -1,0 +1,12 @@
+[package]
+name = "fixture-dual-dep"
+version = "0.0.0"
+edition = "2021"
+publish = false
+
+# Real upstream cgmath 0.18.0 and the renamed cgmath-next present at once,
+# under different local names. Proves the two crates don't collide, and
+# doubles as the differential-testing harness scaffold (AGENTS.md 11.2).
+[dependencies]
+cgmath = "0.18.0"
+cgmath_next = { package = "cgmath-next", path = "../../.." }

@@ -1,0 +1,8 @@
+[package]
+name = "fixture-plain-dep"
+version = "0.0.0"
+edition = "2021"
+publish = false
+
+[dependencies]
+cgmath-next = { path = "../../.." }
