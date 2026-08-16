@@ -1,5 +1,8 @@
 # cgmath-next
 
+[![CI](https://img.shields.io/github/actions/workflow/status/kent-tokyo/cgmath-next/ci.yml?branch=main&label=CI)](https://github.com/kent-tokyo/cgmath-next/actions/workflows/ci.yml)
+[![Documentation](https://img.shields.io/docsrs/cgmath-next)](https://docs.rs/cgmath-next)
+[![crates.io](https://img.shields.io/crates/v/cgmath-next.svg)](https://crates.io/crates/cgmath-next)
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](https://github.com/kent-tokyo/cgmath-next/blob/main/LICENSE)
 
 A maintained, soundness-focused, source-compatible successor to cgmath 0.18.
