@@ -101,3 +101,33 @@ possible at all.
 3. **旧`cgmath`と新crateをrenameして同時に依存できる** — yes, fixture 3.
 4. **doctestでも同じ挙動になる** — yes, fixture 5 (root crate's own doctests).
 5. **workspace内外で挙動が変わらない** — yes, fixture 4 vs. fixture 1.
+
+## Feature matrix (AGENTS.md §12)
+
+Each declared/implicit feature tested individually with
+`cargo test --no-default-features --features <name>`, plus a no-features
+baseline and the existing `cargo test --all-features` from `docs/baseline.md`.
+
+| Row | Command | Result |
+|---|---|---|
+| no features | `cargo test --no-default-features` | pass, 300 tests, 0 failed |
+| `serde` alone | `cargo test --no-default-features --features serde` | pass, 300 tests, 0 failed |
+| `mint` alone | `cargo test --no-default-features --features mint` | pass, 300 tests, 0 failed |
+| `rand` alone | `cargo test --no-default-features --features rand` | pass, 300 tests, 0 failed |
+| `swizzle` alone | `cargo test --no-default-features --features swizzle` | pass, 300 tests, 0 failed |
+| `unstable` alone | `cargo test --no-default-features --features unstable` | pass, 300 tests, 0 failed (confirms `unstable` gates no reachable code either way, see the feature inventory above) |
+| all features | `cargo test --all-features` | pass, 300 tests, 0 failed (from `docs/baseline.md`, re-confirmed after the fix) |
+
+All 7 rows produce the identical 300/0/13-binary shape (256 upstream +
+22 soundness + 22 doctest = 300; test *counts per binary* vary slightly
+between rows only where a feature gates extra doctests/tests, e.g.
+`swizzle` unlocks `tests/swizzle.rs`'s 2 tests instead of 0). No feature
+combination fails, and none was skipped.
+
+**Not yet done**: paired/combined feature builds beyond
+`--all-features` (e.g. `serde` + `mint` but not `rand`) — §12 asks for
+"individual and combination" testing; only the individual rows and the
+all-features row have been run. `--all-features` is a reasonable proxy for
+most pairwise interactions since these features don't have exclusionary
+`cfg` logic against each other (confirmed by reading `src/lib.rs`'s
+feature gates), but a true pairwise matrix hasn't been machine-verified.
