@@ -16,7 +16,7 @@ macro across 7-9 types. Each group lists every source line it covers.
 | ID | Pattern | Reachable in default/normal builds? | Can safe Rust replace it? | Status |
 |---|---|---|---|---|
 | UNSAFE-001 | repr(C) struct <-> fixed-size array transmute | yes | not without changing the public `From`/`AsRef`/`AsMut` API shape | audited sound |
-| UNSAFE-002 | repr(C) struct <-> homogeneous tuple transmute | yes | yes, at the cost of extra field-by-field code per arity | **flagged -- relies on unspecified tuple layout** |
+| UNSAFE-002 | repr(C) struct <-> homogeneous tuple transmute | yes | yes, at the cost of extra field-by-field code per arity | **flagged -- still unverified.** Confirmed empirically that `-Zrandomize-layout` does not randomize tuple layout at all (only structs/enums), so that tool cannot stress-test this entry either way (see detail below) |
 | UNSAFE-003 | `det_sub_proc_unsafe` (unchecked indexing) | yes, for `Matrix4::determinant` (unconditionally); no, for `Matrix4::invert`'s SIMD branch | yes, with a bounds-checked rewrite; likely no measurable cost given the caller already holds a `&Matrix4` | audited sound (see caveats) |
 | UNSAFE-004 | `mem::uninitialized` + external `simd` crate SIMD load/store | **no -- dead code** | irrelevant while dead; would need a full rewrite before ever enabling | dead code, do not enable as-is |
 
@@ -115,20 +115,55 @@ exactly the kind of thing `-Zrandomize-layout` (a Miri/rustc flag that
 deliberately randomizes non-`repr(C)` layout to catch code relying on
 accidental field order) is designed to catch.
 
-**Miri coverage:** none. Not run in this session, and ordinary Miri (without
-`-Zrandomize-layout`) would not catch this class of bug even if run, since
-Miri uses the same rustc layout algorithm the compiled code does.
+**Miri coverage (updated after initial audit):**
+`RUSTFLAGS="-Zrandomize-layout" cargo +nightly miri test --lib` was run
+against the crate's own `#[cfg(test)] mod tests` unit tests (found in
+`src/vector.rs`, `src/point.rs`, `src/quaternion.rs` -- these exercise
+`as_ref`/`as_mut`/`into`/`from` for both the array and tuple forms, e.g.
+`quaternion::tests::test_into` checks `let v: (f32,f32,f32,f32) = v.into();
+assert_eq!(v, (1.0, 2.0, 3.0, 4.0));`). Result: **every
+`test_as_ref`/`test_as_mut`/`test_into`/`test_from` test passed** for
+`Vector2/3/4`, `Point2/3`, and `Quaternion` (72 total lib tests run, 70
+passed; the 2 failures were `quaternion::tests::test_slerp_extrapolate`/
+`test_slerp_half`, both `assert_ulps_eq!` floating-point comparisons in
+spherical interpolation -- unrelated to any conversion/transmute code path,
+same category of Miri float non-determinism recorded in `docs/baseline.md`
+for `rotate_from_euler::test_y`).
 
-**Tests:** `tests/vector.rs`, `tests/point.rs` tuple round-trip assertions
-(pre-existing, unmodified).
+**`-Zrandomize-layout` does NOT cover tuples -- confirmed empirically, not
+just passed-by-accident.** Before trusting the Miri result above, checked
+directly with two throwaway single-file programs compiled with
+`rustc +nightly -Zrandomize-layout -Zlayout-seed=N` for several `N`:
 
-**Status:** flagged, not fixed this session -- out of scope for the
-swap_columns fix, and rewriting a public trait impl across 8 types is
-Phase 3/4 work, not part of this session's checkpoint. Recommend before
-0.18.1 stable: run the existing tuple-conversion tests under
-`cargo +nightly miri test -Zrandomize-layout` as a cheap confidence check,
-and if it's ever a concern, replace the transmutes with explicit
-field-by-field construction (safe, no perf cliff expected at `-O`).
+* A plain `#[repr(Rust)]` struct with 4 `f32` fields: field byte offsets
+  actually change across seeds (e.g. seed 1 -> `4 0 12 8`, seed 2 ->
+  `12 8 4 0`, seed 3 -> `0 12 8 4`) -- confirms the flag and this
+  methodology both work as expected.
+* The tuple `(f32, f32, f32, f32)`: byte offsets are `0 4 8 12` for
+  **every** seed tested (1, 2, 3) -- i.e. always plain declaration order,
+  never reordered.
+
+So the earlier "70/72 conversion tests pass under `-Zrandomize-layout`"
+result **does not actually stress-test UNSAFE-002's core risk**. It only
+re-confirms that current rustc's tuple layout algorithm happens to use
+declaration order (which was already known/assumed) -- `-Zrandomize-layout`
+apparently only randomizes nominal (struct/enum) types, not tuples, so it
+can't disprove or stress a tuple-layout assumption either way. This is a
+more useful, if less reassuring, finding than "it passed": it means no
+tool available in this session can mechanically stress-test UNSAFE-002,
+and the risk remains exactly what it was in the first audit pass --
+empirically stable, not language-guaranteed.
+
+**Tests:** `src/vector.rs`, `src/point.rs`, `src/quaternion.rs`
+`#[cfg(test)] mod tests` (pre-existing upstream unit tests, unmodified).
+
+**Status:** still flagged, not fixed, and **not meaningfully re-verified**
+despite the `-Zrandomize-layout` attempt -- see above for why that attempt
+doesn't apply to tuples. The only mechanical way to close this out found so
+far in this session's toolset is: replace the tuple transmutes with
+explicit field-by-field construction (safe, no perf cliff expected at
+`-O`), which is the same recommendation as the original audit, now with
+more confidence that no cheaper verification shortcut exists.
 
 ---
 
