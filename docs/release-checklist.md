@@ -194,21 +194,20 @@ ships, that's the trigger to insert `0.18.1-rc.1` and stop-and-report
 **Phase 1 is complete** (user confirmation, 2026-08-16, CI green on
 `49d7dca`).
 
-**Deferred, not a stable blocker:** `environment: crates-io` on the
-publish job with a required-reviewer protection rule. This is additive
-hardening on top of what `publish.yml` already has (manual-dispatch-only
-trigger, typed version confirmation, an in-job dry-run before the real
-publish, least-privilege `permissions`, a `concurrency` group preventing
-overlapping publishes, and `Cargo.toml`'s `publish = ["crates-io"]`
-restricting the target registry) -- not a replacement for it. Per the
-user: a required-reviewer gate is most effective with a reviewer other
-than the person dispatching the workflow; self-review by a single
-maintainer adds a click, not much real safety. Since `cgmath-next`
-currently has one maintainer, this is deferred until an independent
-reviewer is available to name, rather than configured now with no
-practical effect. `publish.yml` keeps its `TODO` comment (not referencing
-the environment, since it doesn't exist) -- this is intentional and
-tracked as future work, not an unmet condition for `0.18.1` stable.
+`publish.yml`'s publish-safety measures, considered complete as-is:
+manual `workflow_dispatch`-only trigger, typed version-string
+confirmation checked against `Cargo.toml`, an in-job `cargo publish
+--dry-run` immediately before the real publish, least-privilege
+`permissions: contents: read`, a `concurrency` group preventing
+overlapping publish attempts, `Cargo.toml`'s `publish = ["crates-io"]`
+restricting the target registry, `--no-verify`/`--allow-dirty` never
+used, and explicit human approval required before any dispatch. A
+GitHub Environment with a required-reviewer protection rule was
+considered and explicitly decided against: `cgmath-next` is developed
+and published by one person, so a required-reviewer gate would mean
+self-approval -- extra friction without a meaningful safety gain. Not
+planned as future work either; the list above is the actual, final
+publish-safety design.
 
 ### RC decision
 
