@@ -63,14 +63,20 @@ where a rename isn't even necessary.
   category of existing unsafe code (`AsRef`/`AsMut`/`From` conversions to
   homogeneous tuples, e.g. `(f32, f32, f32)`) relies on tuple memory layout
   that Rust's language reference does not formally guarantee — flagged as
-  `UNSAFE-002`, not yet independently re-verified with `-Zrandomize-layout`.
+  `UNSAFE-002`. `-Zrandomize-layout` was tried as a stress test and
+  confirmed *not* to cover tuple types at all, so this risk remains
+  unverified by any tool available in this project so far; independently
+  corroborated as a 5-year-open upstream issue
+  ([`rustgd/cgmath#538`](https://github.com/rustgd/cgmath/issues/538)), not
+  something specific to this fork.
 * **No Rust ABI compatibility guarantee.** `#[repr(C)]` layout (`size_of`,
   `align_of`, field offsets) is verified specifically for types that
   declare it, not implied crate-wide.
 * **Not a "complete drop-in replacement" for every possible use.** Verified
   compatibility is scoped to what's actually been tested: the upstream test
-  suite (unmodified, all passing), a small number of migration fixtures,
-  and (as reverse-dependency fixtures are added) real downstream crates.
+  suite (unmodified, all passing), a handful of dependency-rename fixtures,
+  and 5 real downstream crates (see
+  [`compat/fixtures/reverse-deps/RESULTS.md`](compat/fixtures/reverse-deps/RESULTS.md)).
   See [`docs/compatibility.md`](docs/compatibility.md) for exactly what's
   been checked.
 
@@ -166,9 +172,11 @@ undefined behavior) are treated as security issues, not ordinary bugs.
 
 ## Release status
 
-**Not yet published to crates.io.** Current state is a local, unpublished
-0.18.1-alpha.1 candidate. See [`docs/release-checklist.md`](docs/release-checklist.md)
-for what's outstanding before an alpha or stable release.
+**Not yet published to crates.io.** Current state is an unpublished
+0.18.1-alpha.1 candidate (source available on GitHub, no crates.io release,
+tag, or GitHub Release exists). See
+[`docs/release-checklist.md`](docs/release-checklist.md) for what's
+outstanding before an alpha or stable release.
 
 ## Contributing
 

@@ -19,8 +19,8 @@ this project's automation does on its own.
 | 4 | swap_columnsの既知UBが修正されている | done, and broader than the ticket -- see the fix commit, `docs/unsafe-audit.md` |
 | 5 | Miri regression testが通る | done -- `tests/soundness/`, 22/22 pass under `cargo +nightly miri test --test soundness` |
 | 6 | public API差分が生成されている | done -- `docs/api-inventory.md`, zero-diff result |
-| 7 | feature matrixが通る | done -- `docs/compatibility.md`, 6/6 individual rows + all-features, not the full pairwise combination matrix (noted as a gap there) |
-| 8 | migration fixtureが3件以上通る | done -- `compat/fixtures/reverse-deps/RESULTS.md`, 3 real reverse-dependency crates |
+| 7 | feature matrixが通る | done -- `docs/compatibility.md`, 6/6 individual rows + all-features + all 6 pairwise combinations |
+| 8 | migration fixtureが3件以上通る | done, and exceeds the stable gate too -- `compat/fixtures/reverse-deps/RESULTS.md`, 5 real reverse-dependency crates |
 | 9 | unsafe inventoryが完成している | done -- `docs/unsafe-audit.md`, 4 pattern groups covering every remaining `unsafe` |
 | 10 | 各unsafeに監査状態が記録されている | done -- same doc, per-group Status field |
 | 11 | README、CHANGELOG、SECURITY.mdが存在する | done |
