@@ -67,6 +67,15 @@ as part of the faithful 0.18.0 import (see `docs/provenance.md`).
    equality, same-crate round-trip, and cross-crate deserialization for
    `Vector1..4`, `Point1..3`, `Matrix2..4`, `Quaternion`,
    `Euler<Rad/Deg<S>>`, and `Decomposed`. All pass, byte-identical.
+ - Extended `compat/fixtures/dual-dep/` with 5 `mint` conversion-inventory
+   tests covering every mint impl (`Vector2..4`, `Point2..3`,
+   `Matrix2..4`, `Quaternion`, `Euler`), using pairwise-distinct
+   component values to positively catch a swap/transpose/scalar-vector
+   mixup rather than pass on symmetric test data. Confirms
+   `mint::ColumnMatrix{2,3,4}` is genuinely column-major (checked against
+   `Matrix::row()` on an asymmetric matrix, not just the column), and
+   `mint::Quaternion.s`/`.v` and `mint::EulerAngles.a/b/c` map correctly.
+   All pass.
  - Renamed package to `cgmath-next` (crates.io name only —
    `[lib] name = "cgmath"` is unchanged, so `use cgmath::...` still works).
    Version set to `0.18.1-alpha.1` to signal this is a patch series on top

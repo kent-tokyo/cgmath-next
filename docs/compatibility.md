@@ -178,8 +178,25 @@ attribute overrides, so field name/order/type is what determines the wire
 format, and the zero public-API-diff result (`docs/api-inventory.md`)
 already establishes those match.
 
-Not covered yet: swizzle operations and `mint` conversion round-trips
-(tracked separately, see `docs/release-checklist.md`). `tests/soundness/`
+Plus 5 mint conversion-inventory tests (both crates built with
+`features = ["mint"]`), covering every mint impl in the crate --
+`Vector2..4`, `Point2..3`, `Matrix2..4`, `Quaternion`, and `Euler` --
+each bidirectional (`Into`/`From`). Every test uses pairwise-distinct
+component values specifically so that a component swap, a matrix
+transpose, or a quaternion scalar/vector mixup would fail the assertion
+rather than pass by coincidence (symmetric test data can't distinguish
+"correct" from "silently reordered"). The matrix test additionally
+cross-checks against `Matrix::row()` on a deliberately asymmetric
+matrix and asserts the mint column does *not* equal the row, positively
+ruling out an accidental transpose rather than just checking the column
+happens to be right. **All 5 pass**, both against real `cgmath` 0.18.0
+and `cgmath-next`, confirming `mint::ColumnMatrix{2,3,4}` really is
+column-major relative to cgmath's own layout, `mint::Quaternion.s`/`.v`
+really are the scalar/vector parts (not swapped), and
+`mint::EulerAngles.a/b/c` really map to `x/y/z` in that order.
+
+Not covered yet: swizzle operations (tracked separately, see
+`docs/release-checklist.md`). `tests/soundness/`
 already independently covers `swap_columns`/`swap_elements`/`swap_rows`
 behavior (not compared against upstream here, since upstream's version of
 those functions is the known-UB one -- see `docs/unsafe-audit.md` and the

@@ -38,7 +38,7 @@ approval (§21) -- this document does not constitute that approval.
 | 2 | Zero known safe-to-UB paths | **guarded, not literally zero** -- `UNSAFE-002` (tuple-layout transmute) now runs a runtime layout check (size/align/per-field offset) before every transmute in this category, panicking instead of transmuting on a mismatch; verified via Miri, a negative-control test, and release-build disassembly confirming zero cost when layout matches (see `docs/unsafe-audit.md`'s feasibility-study section). This converts the failure mode from silent UB to a loud panic -- it is **not** a language-level soundness proof, tuple layout remains officially unspecified, so this row is "guarded" rather than truly "met" |
 | 3 | Remaining unsafe invariants are documented | met -- `docs/unsafe-audit.md` |
 | 4 | Release-targeted unsafe tests pass under Miri | **met.** `UNSAFE-001` has a dedicated Miri regression suite (`tests/soundness/array_conversions.rs`, 14 tests, all `AsRef`/`AsMut`/`From<&[..]>`/`From<&mut [..]>` paths across `Vector1-4`/`Point1-3`/`Matrix2-4`/`Quaternion`, including write-back-through-the-view checks and `-Zmiri-strict-provenance`); `UNSAFE-002` already has its own Miri coverage (see row 2); `UNSAFE-003` and `UNSAFE-004` are resolved/deleted, so there is nothing unsafe left in either category to test under Miri |
-| 5 | serde, mint, rand, swizzle compatibility is verified | in progress -- `serde` now has dedicated byte-exact/round-trip/cross-deserialization differential tests against real `cgmath` 0.18.0 (`compat/fixtures/dual-dep/`, 6/6 pass) plus a confirmed feature-off dependency leak check; `mint`/`rand`/`swizzle` still only have individual-feature and pairwise `cargo test` coverage (`docs/compatibility.md`), not dedicated verification |
+| 5 | serde, mint, rand, swizzle compatibility is verified | in progress -- `serde` and `mint` now have dedicated differential tests against real `cgmath` 0.18.0 (`compat/fixtures/dual-dep/`, 11/11 pass: 6 serde byte-exact/round-trip + 5 mint component-order/orientation/round-trip) plus confirmed feature-off dependency leak checks for both; `rand`/`swizzle` still only have individual-feature and pairwise `cargo test` coverage (`docs/compatibility.md`), not dedicated verification |
 | 6 | 5+ migration fixtures pass | met -- 5/5 (`arcball`, `crevice`, `truck-base`, `vector-traits`, `three-d`) |
 | 7 | MSRV is measured and documented | met -- `docs/msrv.md`, though it documents that the number is driven by transitive deps and will drift |
 | 8 | CI passes on 3 platforms | met -- verified by real runs against `origin/main`, and it's caught 2 real issues so far (not just "ran green"): [run](https://github.com/kent-tokyo/cgmath-next/actions/runs/31937609325) 1 found a `cargo audit` lockfile bug (fixed, `825d7f5`); the [layout-guard commit's run](https://github.com/kent-tokyo/cgmath-next/actions/runs/31940302025) found the `miri` job's `--lib` sweep hitting Miri's own known float non-determinism in `slerp` for the first time (fixed by narrowing that step's scope, not by weakening any test, `f155eaf`; [confirmed green](https://github.com/kent-tokyo/cgmath-next/actions/runs/31940574715) after). Otherwise green across all blocking jobs except the pre-documented informational `fmt` job |
@@ -90,9 +90,17 @@ approval (§21) -- this document does not constitute that approval.
      confirmed: `cargo tree` (no flags, and `--no-default-features`) shows
      `serde` entirely absent from the dependency graph. See
      `docs/compatibility.md`'s differential-testing section.
-   - `mint`: component order, matrix orientation, and round-trip
-     verification (same "does it actually match", not just "does it
-     compile" bar).
+   - ~~`mint`: component order, matrix orientation, and round-trip
+     verification~~ -- done: `compat/fixtures/dual-dep/` extended with 5
+     tests covering the full mint inventory (`Vector2..4`, `Point2..3`,
+     `Matrix2..4`, `Quaternion`, `Euler`), every pair bidirectional. Uses
+     pairwise-distinct component values so a swap/transpose/scalar-vector
+     mixup would fail, not pass by coincidence; matrix orientation
+     specifically checked against both the correct column (`m[i]`, must
+     match) and the row (`m.row(i)`, must NOT match, since the test
+     matrix is deliberately asymmetric). Feature-off leak confirmed via
+     `cargo tree` the same way as `serde`. All pass, both against real
+     `cgmath` 0.18.0 and `cgmath-next`.
    - `rand`: confirm the public `Distribution` impls and feature
      isolation (no accidental behavior change when `rand` is off).
    - `swizzle`: API diff specifically with vs. without the feature

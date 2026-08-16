@@ -377,3 +377,174 @@ fn serde_decomposed_transform_byte_exact_roundtrip() {
     };
     assert_serde_matches(&d_o, &d_n);
 }
+
+// mint conversion inventory (docs/release-checklist.md outstanding item 6):
+// every mint conversion impl in the crate, not just a sample -- Vector2/3/4,
+// Point2/3, Matrix2/3/4 (column orientation specifically, not just field
+// pass-through), Quaternion (scalar/vector order specifically), and Euler
+// (axis order). All values below are pairwise-distinct so a component swap,
+// a transpose, or a scalar/vector mixup would fail these assertions instead
+// of accidentally passing. `mint` here is the single directly-depended-on
+// crate (unified by Cargo with both cgmath 0.18.0's and cgmath-next's own
+// `mint` dependency, same "0.5" requirement), so `cgmath::Vector2: Into<mint::Vector2<_>>`
+// and `cgmath_next::Vector2: Into<mint::Vector2<_>>` genuinely produce the
+// same mint type, not two incompatible re-exports.
+
+#[test]
+fn mint_vector_component_order_and_roundtrip() {
+    let v2_o = cgmath::Vector2::new(1.0f32, 2.0);
+    let v2_n = cgmath_next::Vector2::new(1.0f32, 2.0);
+    let m2_o: mint::Vector2<f32> = v2_o.into();
+    let m2_n: mint::Vector2<f32> = v2_n.into();
+    assert_eq!((m2_o.x, m2_o.y), (1.0, 2.0));
+    assert_eq!((m2_n.x, m2_n.y), (1.0, 2.0));
+    assert_eq!(cgmath::Vector2::from(m2_o), v2_o);
+    assert_eq!(cgmath_next::Vector2::from(m2_n), v2_n);
+
+    let v3_o = v3_old(1.0, 2.0, 3.0);
+    let v3_n = v3_next(1.0, 2.0, 3.0);
+    let m3_o: mint::Vector3<f64> = v3_o.into();
+    let m3_n: mint::Vector3<f64> = v3_n.into();
+    assert_eq!((m3_o.x, m3_o.y, m3_o.z), (1.0, 2.0, 3.0));
+    assert_eq!((m3_n.x, m3_n.y, m3_n.z), (1.0, 2.0, 3.0));
+    assert_eq!(cgmath::Vector3::from(m3_o), v3_o);
+    assert_eq!(cgmath_next::Vector3::from(m3_n), v3_n);
+
+    let v4_o = cgmath::Vector4::new(1.0f32, 2.0, 3.0, 4.0);
+    let v4_n = cgmath_next::Vector4::new(1.0f32, 2.0, 3.0, 4.0);
+    let m4_o: mint::Vector4<f32> = v4_o.into();
+    let m4_n: mint::Vector4<f32> = v4_n.into();
+    assert_eq!((m4_o.x, m4_o.y, m4_o.z, m4_o.w), (1.0, 2.0, 3.0, 4.0));
+    assert_eq!((m4_n.x, m4_n.y, m4_n.z, m4_n.w), (1.0, 2.0, 3.0, 4.0));
+    assert_eq!(cgmath::Vector4::from(m4_o), v4_o);
+    assert_eq!(cgmath_next::Vector4::from(m4_n), v4_n);
+}
+
+#[test]
+fn mint_point_component_order_and_roundtrip() {
+    let p2_o = cgmath::Point2::new(5.0f32, 6.0);
+    let p2_n = cgmath_next::Point2::new(5.0f32, 6.0);
+    let m2_o: mint::Point2<f32> = p2_o.into();
+    let m2_n: mint::Point2<f32> = p2_n.into();
+    assert_eq!((m2_o.x, m2_o.y), (5.0, 6.0));
+    assert_eq!((m2_n.x, m2_n.y), (5.0, 6.0));
+    assert_eq!(cgmath::Point2::from(m2_o), p2_o);
+    assert_eq!(cgmath_next::Point2::from(m2_n), p2_n);
+
+    let p3_o = cgmath::Point3::new(5.0f64, 6.0, 7.0);
+    let p3_n = cgmath_next::Point3::new(5.0f64, 6.0, 7.0);
+    let m3_o: mint::Point3<f64> = p3_o.into();
+    let m3_n: mint::Point3<f64> = p3_n.into();
+    assert_eq!((m3_o.x, m3_o.y, m3_o.z), (5.0, 6.0, 7.0));
+    assert_eq!((m3_n.x, m3_n.y, m3_n.z), (5.0, 6.0, 7.0));
+    assert_eq!(cgmath::Point3::from(m3_o), p3_o);
+    assert_eq!(cgmath_next::Point3::from(m3_n), p3_n);
+}
+
+#[test]
+fn mint_matrix_column_orientation_and_roundtrip() {
+    // All 16 components distinct so a transpose (row/column swap) cannot
+    // accidentally produce the same result as the correct column mapping.
+    #[rustfmt::skip]
+    let m_o = cgmath::Matrix4::new(
+        1.0f64, 2.0, 3.0, 4.0,
+        5.0, 6.0, 7.0, 8.0,
+        9.0, 10.0, 11.0, 12.0,
+        13.0, 14.0, 15.0, 16.0,
+    );
+    #[rustfmt::skip]
+    let m_n = cgmath_next::Matrix4::new(
+        1.0f64, 2.0, 3.0, 4.0,
+        5.0, 6.0, 7.0, 8.0,
+        9.0, 10.0, 11.0, 12.0,
+        13.0, 14.0, 15.0, 16.0,
+    );
+    let mint_o: mint::ColumnMatrix4<f64> = m_o.into();
+    let mint_n: mint::ColumnMatrix4<f64> = m_n.into();
+
+    // mint's .x/.y/.z/.w must equal cgmath's own columns (Matrix::column),
+    // not its rows -- this is the actual "column orientation" claim.
+    for (i, col) in [mint_o.x, mint_o.y, mint_o.z, mint_o.w].into_iter().enumerate() {
+        use cgmath::Matrix as _;
+        let expected = m_o[i];
+        assert_eq!((col.x, col.y, col.z, col.w), (expected.x, expected.y, expected.z, expected.w));
+        // and NOT the row (would only coincide if the matrix were
+        // symmetric, which this one deliberately isn't: row 0 is
+        // [1,5,9,13], column 0 is [1,2,3,4]).
+        let row = m_o.row(i);
+        assert_ne!((col.x, col.y, col.z, col.w), (row.x, row.y, row.z, row.w));
+    }
+    for (i, col) in [mint_n.x, mint_n.y, mint_n.z, mint_n.w].into_iter().enumerate() {
+        use cgmath_next::Matrix as _;
+        let expected = m_n[i];
+        assert_eq!((col.x, col.y, col.z, col.w), (expected.x, expected.y, expected.z, expected.w));
+        let row = m_n.row(i);
+        assert_ne!((col.x, col.y, col.z, col.w), (row.x, row.y, row.z, row.w));
+    }
+
+    assert_eq!(cgmath::Matrix4::from(mint_o), m_o);
+    assert_eq!(cgmath_next::Matrix4::from(mint_n), m_n);
+
+    // Matrix2/Matrix3 round-trip (orientation already proven above; these
+    // just confirm the inventory covers every matrix size, not just 4x4).
+    let m2_o = cgmath::Matrix2::new(1.0f32, 2.0, 3.0, 4.0);
+    let m2_n = cgmath_next::Matrix2::new(1.0f32, 2.0, 3.0, 4.0);
+    let mint2_o: mint::ColumnMatrix2<f32> = m2_o.into();
+    let mint2_n: mint::ColumnMatrix2<f32> = m2_n.into();
+    assert_eq!((mint2_o.x.x, mint2_o.x.y, mint2_o.y.x, mint2_o.y.y), (1.0, 2.0, 3.0, 4.0));
+    assert_eq!(cgmath::Matrix2::from(mint2_o), m2_o);
+    assert_eq!(cgmath_next::Matrix2::from(mint2_n), m2_n);
+
+    #[rustfmt::skip]
+    let m3_o = cgmath::Matrix3::new(1.0f32, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0);
+    #[rustfmt::skip]
+    let m3_n = cgmath_next::Matrix3::new(1.0f32, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0);
+    let mint3_o: mint::ColumnMatrix3<f32> = m3_o.into();
+    let mint3_n: mint::ColumnMatrix3<f32> = m3_n.into();
+    assert_eq!((mint3_o.x.x, mint3_o.x.y, mint3_o.x.z), (1.0, 2.0, 3.0));
+    assert_eq!(cgmath::Matrix3::from(mint3_o), m3_o);
+    assert_eq!(cgmath_next::Matrix3::from(mint3_n), m3_n);
+}
+
+#[test]
+fn mint_quaternion_scalar_vector_order_and_roundtrip() {
+    // Quaternion::new(w, xi, yj, zk) -- w is the scalar part, (xi,yj,zk)
+    // the vector part. All 4 components distinct.
+    let q_o = cgmath::Quaternion::new(4.0f64, 1.0, 2.0, 3.0);
+    let q_n = cgmath_next::Quaternion::new(4.0f64, 1.0, 2.0, 3.0);
+    let m_o: mint::Quaternion<f64> = q_o.into();
+    let m_n: mint::Quaternion<f64> = q_n.into();
+
+    // mint::Quaternion.s must be the scalar (4.0, i.e. w), and .v the
+    // vector part (1,2,3) -- not shuffled or reversed.
+    assert_eq!(m_o.s, 4.0);
+    assert_eq!((m_o.v.x, m_o.v.y, m_o.v.z), (1.0, 2.0, 3.0));
+    assert_eq!(m_n.s, 4.0);
+    assert_eq!((m_n.v.x, m_n.v.y, m_n.v.z), (1.0, 2.0, 3.0));
+
+    assert_eq!(cgmath::Quaternion::from(m_o), q_o);
+    assert_eq!(cgmath_next::Quaternion::from(m_n), q_n);
+}
+
+#[test]
+fn mint_euler_axis_order_and_roundtrip() {
+    // The `From`/`Into` bounds on `Euler<A>`'s mint conversion are
+    // `A: From<S>`/`A: Into<S>` for mint's generic scalar `S` -- since
+    // `Rad<f64>` doesn't implement `From<f64>`/`Into<f64>` (only
+    // `From<Deg<f64>>`, see src/angle.rs), the only S that actually
+    // satisfies the bound is the Angle type itself (S = Rad<f64>, via
+    // the reflexive `impl<T> From<T> for T`), not the bare scalar.
+    let e_o = cgmath::Euler::new(cgmath::Rad(0.1f64), cgmath::Rad(0.2), cgmath::Rad(0.3));
+    let e_n = cgmath_next::Euler::new(cgmath_next::Rad(0.1f64), cgmath_next::Rad(0.2), cgmath_next::Rad(0.3));
+    let m_o: mint::EulerAngles<cgmath::Rad<f64>, mint::IntraXYZ> = e_o.into();
+    let m_n: mint::EulerAngles<cgmath_next::Rad<f64>, mint::IntraXYZ> = e_n.into();
+
+    // .a/.b/.c must map to x/y/z in that order, not shuffled.
+    assert_eq!((m_o.a.0, m_o.b.0, m_o.c.0), (0.1, 0.2, 0.3));
+    assert_eq!((m_n.a.0, m_n.b.0, m_n.c.0), (0.1, 0.2, 0.3));
+
+    let e_o2: cgmath::Euler<cgmath::Rad<f64>> = m_o.into();
+    let e_n2: cgmath_next::Euler<cgmath_next::Rad<f64>> = m_n.into();
+    assert_eq!((e_o2.x.0, e_o2.y.0, e_o2.z.0), (0.1, 0.2, 0.3));
+    assert_eq!((e_n2.x.0, e_n2.y.0, e_n2.z.0), (0.1, 0.2, 0.3));
+}
