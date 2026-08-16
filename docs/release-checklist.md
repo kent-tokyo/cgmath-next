@@ -38,7 +38,7 @@ approval (§21) -- this document does not constitute that approval.
 | 2 | 既知のsafe-to-UB経路がゼロ | **not met** -- `UNSAFE-002` (tuple-layout transmute) remains unverified; `-Zrandomize-layout` was attempted and confirmed not to cover this case; independently corroborated as an unresolved upstream issue since 2021 (`rustgd/cgmath#538`), whose own collaborator concluded the only real fix is removing the reference-returning impls -- a public API change, out of scope here (see `docs/unsafe-audit.md`) |
 | 3 | 残存unsafeのinvariantが文書化されている | met -- `docs/unsafe-audit.md` |
 | 4 | release対象unsafe testがMiriで通る | met for what exists (`tests/soundness/`); `UNSAFE-001`/`003`/`004` don't have dedicated Miri regression tests, only the audit's evidence |
-| 5 | serde、mint、rand、swizzleの互換性が検証されている | partially -- individual-feature `cargo test` passes for all 4 (`docs/compatibility.md`); no dedicated round-trip/format-stability test beyond what upstream's own tests already cover |
+| 5 | serde、mint、rand、swizzleの互換性が検証されている | mostly -- individual-feature and all 6 pairwise-combination `cargo test` runs pass for all 4 (`docs/compatibility.md`); no dedicated round-trip/format-stability test beyond what upstream's own tests already cover |
 | 6 | migration fixtureが5件以上通る | met -- 5/5 (`arcball`, `crevice`, `truck-base`, `vector-traits`, `three-d`) |
 | 7 | MSRVが実測・文書化されている | met -- `docs/msrv.md`, though it documents that the number is driven by transitive deps and will drift |
 | 8 | 3 platformでCIが通る | met -- verified by real runs against `origin/main`: [run 1](https://github.com/kent-tokyo/cgmath-next/actions/runs/31937609325) caught a real `cargo audit` lockfile bug (fixed, see `825d7f5`), [run 2](https://github.com/kent-tokyo/cgmath-next/actions/runs/31937821604) green across all 9 jobs except the pre-documented informational `fmt` job |
@@ -56,5 +56,6 @@ approval (§21) -- this document does not constitute that approval.
 3. ~~`cargo audit` and `cargo deny check`~~ -- done, see row 9 above.
 4. ~~CI: 3-platform matrix~~ -- configured and verified by real
    `origin/main` Actions runs, see row 8 above.
-5. Pairwise feature combination testing beyond `--all-features`.
+5. ~~Pairwise feature combination testing~~ -- done, see row 5 (all 6
+   pairs pass, purely additive, no interaction issues).
 6. Human review and explicit publish approval.

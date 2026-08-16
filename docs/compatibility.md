@@ -124,13 +124,29 @@ Raw logs backing these counts: `/tmp/feature-matrix/*.log` (not committed,
 machine-local scratch output — reproduce with the commands in the table).
 No feature combination fails, and none was skipped.
 
-**Not yet done**: paired/combined feature builds beyond
-`--all-features` (e.g. `serde` + `mint` but not `rand`) — §12 asks for
-"individual and combination" testing; only the individual rows and the
-all-features row have been run. `--all-features` is a reasonable proxy for
-most pairwise interactions since these features don't have exclusionary
-`cfg` logic against each other (confirmed by reading `src/lib.rs`'s
-feature gates), but a true pairwise matrix hasn't been machine-verified.
+### Pairwise feature combinations
+
+All C(4,2) = 6 pairs among `serde`/`mint`/`rand`/`swizzle` (`unstable`
+excluded — confirmed above to gate no reachable code, so pairing it with
+anything is equivalent to the single-feature row), run as
+`cargo test --no-default-features --features <a>,<b>`:
+
+| Pair | Result |
+|---|---|
+| `serde,mint` | pass, 301 tests, 0 failed |
+| `serde,rand` | pass, 301 tests, 0 failed |
+| `serde,swizzle` | pass, 303 tests, 0 failed |
+| `mint,rand` | pass, 300 tests, 0 failed |
+| `mint,swizzle` | pass, 302 tests, 0 failed |
+| `rand,swizzle` | pass, 302 tests, 0 failed |
+
+Every count is exactly the sum of that pair's individual-row bonuses
+(serde +1 doctest, swizzle +2 tests, mint/rand +0) — additive, no
+pairwise-specific gain or loss, confirming the single-feature rows above
+and `--all-features` already cover the interaction space; no `cfg` logic
+in `src/lib.rs` makes any pair behave differently than the sum of its
+parts. §12's "individual and combination" requirement is now fully met,
+not just individual + all-features.
 
 ## Differential testing vs. upstream (AGENTS.md §11.2)
 
