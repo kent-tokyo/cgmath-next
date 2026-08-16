@@ -21,7 +21,7 @@ this project's automation does on its own.
 | 6 | Public API diff has been generated | done -- `docs/api-inventory.md`, zero-diff result |
 | 7 | Feature matrix passes | done -- `docs/compatibility.md`, 6/6 individual rows + all-features + all 6 pairwise combinations |
 | 8 | 3+ migration fixtures pass | done, and exceeds the stable gate too -- `compat/fixtures/reverse-deps/RESULTS.md`, 5 real reverse-dependency crates |
-| 9 | Unsafe inventory is complete | done -- `docs/unsafe-audit.md`, 4 pattern groups covering every remaining `unsafe` |
+| 9 | Unsafe inventory is complete | done -- `docs/unsafe-audit.md`; was 4 pattern groups, now 3 (`UNSAFE-001`, `002`, `004`) after `UNSAFE-003` was resolved into safe code this session |
 | 10 | Each unsafe has an audit status recorded | done -- same doc, per-group Status field |
 | 11 | README, CHANGELOG, SECURITY.md exist | done |
 | 12 | crates.io publish has not happened yet | done (trivially true) |
@@ -37,7 +37,7 @@ approval (§21) -- this document does not constitute that approval.
 | 1 | Zero unexplained public API removals | met -- zero API diff |
 | 2 | Zero known safe-to-UB paths | **guarded, not literally zero** -- `UNSAFE-002` (tuple-layout transmute) now runs a runtime layout check (size/align/per-field offset) before every transmute in this category, panicking instead of transmuting on a mismatch; verified via Miri, a negative-control test, and release-build disassembly confirming zero cost when layout matches (see `docs/unsafe-audit.md`'s feasibility-study section). This converts the failure mode from silent UB to a loud panic -- it is **not** a language-level soundness proof, tuple layout remains officially unspecified, so this row is "guarded" rather than truly "met" |
 | 3 | Remaining unsafe invariants are documented | met -- `docs/unsafe-audit.md` |
-| 4 | Release-targeted unsafe tests pass under Miri | in progress -- `UNSAFE-001` now has a dedicated Miri regression suite (`tests/soundness/array_conversions.rs`, 14 tests, all `AsRef`/`AsMut`/`From<&[..]>`/`From<&mut [..]>` paths across `Vector1-4`/`Point1-3`/`Matrix2-4`/`Quaternion`, including write-back-through-the-view checks and `-Zmiri-strict-provenance`); `UNSAFE-003`/`004` still pending |
+| 4 | Release-targeted unsafe tests pass under Miri | in progress -- `UNSAFE-001` now has a dedicated Miri regression suite (`tests/soundness/array_conversions.rs`, 14 tests, all `AsRef`/`AsMut`/`From<&[..]>`/`From<&mut [..]>` paths across `Vector1-4`/`Point1-3`/`Matrix2-4`/`Quaternion`, including write-back-through-the-view checks and `-Zmiri-strict-provenance`); `UNSAFE-003` is resolved (no longer unsafe, so nothing to test under Miri for it); `UNSAFE-004` still pending |
 | 5 | serde, mint, rand, swizzle compatibility is verified | mostly -- individual-feature and all 6 pairwise-combination `cargo test` runs pass for all 4 (`docs/compatibility.md`); no dedicated round-trip/format-stability test beyond what upstream's own tests already cover |
 | 6 | 5+ migration fixtures pass | met -- 5/5 (`arcball`, `crevice`, `truck-base`, `vector-traits`, `three-d`) |
 | 7 | MSRV is measured and documented | met -- `docs/msrv.md`, though it documents that the number is driven by transitive deps and will drift |
@@ -68,9 +68,12 @@ approval (§21) -- this document does not constitute that approval.
    - ~~Dedicated Miri regression test for UNSAFE-001~~ (array reference
      conversion) -- done, `tests/soundness/array_conversions.rs`, see
      row 4 above.
-   - Before/after benchmark for UNSAFE-003 if its unchecked indexing
-     were replaced with safe indexing (currently audited sound as-is,
-     not blocking, but the comparison hasn't been measured).
+   - ~~Before/after benchmark for UNSAFE-003~~ -- done and adopted:
+     `det_sub_proc_unsafe` was replaced with bounds-checked indexing,
+     confirmed via release-build disassembly to compile to byte-identical
+     machine code (zero cost), so the unchecked version was kept only in
+     git history. UNSAFE-003 is resolved and removed from the unsafe
+     inventory, see `docs/unsafe-audit.md`.
    - `serde`: byte-for-byte serialized representation equality and
      round-trip, for representative types, against real `cgmath` 0.18.0
      -- not just "does `cargo test --features serde` pass."

@@ -43,6 +43,18 @@ as part of the faithful 0.18.0 import (see `docs/provenance.md`).
    `docs/unsafe-audit.md`'s feasibility-study section for exactly what is
    and isn't established, and for the MSRV-compatibility analysis behind
    this specific implementation choice.
+ - **UNSAFE-003 (`det_sub_proc_unsafe` unchecked indexing) is resolved.**
+   Replaced with plain bounds-checked indexing (`s[i]` instead of
+   `s.get_unchecked(i)`); confirmed via release-build disassembly to
+   compile to byte-identical machine code to the unchecked version, i.e.
+   zero cost, not an estimate. Renamed to `det_sub_proc` and no longer an
+   `unsafe fn` — this pattern is fully removed from `docs/unsafe-audit.md`,
+   which now tracks 3 remaining unsafe pattern groups instead of 4.
+ - Added a dedicated Miri regression suite for UNSAFE-001 (fixed-size-array
+   reference conversions), `tests/soundness/array_conversions.rs`: covers
+   `AsRef`/`AsMut`/`From<&[..]>`/`From<&mut [..]>` for `Vector1..4`,
+   `Point1..3`, both `Matrix2..4` array shapes, and `Quaternion`, including
+   write-back-through-the-view checks and `-Zmiri-strict-provenance`.
  - Renamed package to `cgmath-next` (crates.io name only —
    `[lib] name = "cgmath"` is unchanged, so `use cgmath::...` still works).
    Version set to `0.18.1-alpha.1` to signal this is a patch series on top

@@ -862,8 +862,7 @@ impl<S: BaseFloat> SquareMatrix for Matrix4<S> {
     }
 
     fn determinant(&self) -> S {
-        // SAFETY: 1, 2, 3 are all in 0..4, see det_sub_proc_unsafe.
-        let tmp = unsafe { det_sub_proc_unsafe(self, 1, 2, 3) };
+        let tmp = det_sub_proc(self, 1, 2, 3);
         tmp.dot(Vector4::new(self[0][0], self[1][0], self[2][0], self[3][0]))
     }
 
@@ -920,11 +919,9 @@ impl<S: BaseFloat> SquareMatrix for Matrix4<S> {
     }
     #[cfg(feature = "simd")]
     fn invert(&self) -> Option<Matrix4<S>> {
-        // SAFETY (this fn's 4 det_sub_proc_unsafe calls): all index
-        // arguments are literal constants in 0..4, see det_sub_proc_unsafe.
         // Dead code in a normal build -- `simd` is not a resolvable Cargo
         // feature, see docs/unsafe-audit.md UNSAFE-004.
-        let tmp0 = unsafe { det_sub_proc_unsafe(self, 1, 2, 3) };
+        let tmp0 = det_sub_proc(self, 1, 2, 3);
         let det = tmp0.dot(Vector4::new(self[0][0], self[1][0], self[2][0], self[3][0]));
 
         if det == S::zero() {
@@ -932,9 +929,9 @@ impl<S: BaseFloat> SquareMatrix for Matrix4<S> {
         } else {
             let inv_det = S::one() / det;
             let tmp0 = tmp0 * inv_det;
-            let tmp1 = unsafe { det_sub_proc_unsafe(self, 0, 3, 2) * inv_det };
-            let tmp2 = unsafe { det_sub_proc_unsafe(self, 0, 1, 3) * inv_det };
-            let tmp3 = unsafe { det_sub_proc_unsafe(self, 0, 2, 1) * inv_det };
+            let tmp1 = det_sub_proc(self, 0, 3, 2) * inv_det;
+            let tmp2 = det_sub_proc(self, 0, 1, 3) * inv_det;
+            let tmp3 = det_sub_proc(self, 0, 2, 1) * inv_det;
             Some(Matrix4::from_cols(tmp0, tmp1, tmp2, tmp3))
         }
     }
@@ -1755,75 +1752,27 @@ where
     }
 }
 
-// Sub procedure for SIMD when dealing with determinant and inversion
+// Sub procedure for SIMD when dealing with determinant and inversion.
 //
-// SAFETY (caller requirement): `x`, `y`, `z` must each be in `0..4`, since
-// they're used to index a 16-element array at offsets up to `12 + {x,y,z}`.
-// See docs/unsafe-audit.md UNSAFE-003.
+// Bounds-checked indexing (formerly `get_unchecked`, see docs/unsafe-audit.md
+// UNSAFE-003): `x`, `y`, `z` are always literal constants in 0..4 at every
+// call site, so the compiler proves the checks in range and elides them --
+// confirmed via release-build disassembly to compile to byte-identical
+// machine code as the old unchecked version, not just assumed.
 #[inline]
-unsafe fn det_sub_proc_unsafe<S: BaseFloat>(
-    m: &Matrix4<S>,
-    x: usize,
-    y: usize,
-    z: usize,
-) -> Vector4<S> {
+fn det_sub_proc<S: BaseFloat>(m: &Matrix4<S>, x: usize, y: usize, z: usize) -> Vector4<S> {
     let s: &[S; 16] = m.as_ref();
-    let a = Vector4::new(
-        *s.get_unchecked(4 + x),
-        *s.get_unchecked(12 + x),
-        *s.get_unchecked(x),
-        *s.get_unchecked(8 + x),
-    );
-    let b = Vector4::new(
-        *s.get_unchecked(8 + y),
-        *s.get_unchecked(8 + y),
-        *s.get_unchecked(4 + y),
-        *s.get_unchecked(4 + y),
-    );
-    let c = Vector4::new(
-        *s.get_unchecked(12 + z),
-        *s.get_unchecked(z),
-        *s.get_unchecked(12 + z),
-        *s.get_unchecked(z),
-    );
+    let a = Vector4::new(s[4 + x], s[12 + x], s[x], s[8 + x]);
+    let b = Vector4::new(s[8 + y], s[8 + y], s[4 + y], s[4 + y]);
+    let c = Vector4::new(s[12 + z], s[z], s[12 + z], s[z]);
 
-    let d = Vector4::new(
-        *s.get_unchecked(8 + x),
-        *s.get_unchecked(8 + x),
-        *s.get_unchecked(4 + x),
-        *s.get_unchecked(4 + x),
-    );
-    let e = Vector4::new(
-        *s.get_unchecked(12 + y),
-        *s.get_unchecked(y),
-        *s.get_unchecked(12 + y),
-        *s.get_unchecked(y),
-    );
-    let f = Vector4::new(
-        *s.get_unchecked(4 + z),
-        *s.get_unchecked(12 + z),
-        *s.get_unchecked(z),
-        *s.get_unchecked(8 + z),
-    );
+    let d = Vector4::new(s[8 + x], s[8 + x], s[4 + x], s[4 + x]);
+    let e = Vector4::new(s[12 + y], s[y], s[12 + y], s[y]);
+    let f = Vector4::new(s[4 + z], s[12 + z], s[z], s[8 + z]);
 
-    let g = Vector4::new(
-        *s.get_unchecked(12 + x),
-        *s.get_unchecked(x),
-        *s.get_unchecked(12 + x),
-        *s.get_unchecked(x),
-    );
-    let h = Vector4::new(
-        *s.get_unchecked(4 + y),
-        *s.get_unchecked(12 + y),
-        *s.get_unchecked(y),
-        *s.get_unchecked(8 + y),
-    );
-    let i = Vector4::new(
-        *s.get_unchecked(8 + z),
-        *s.get_unchecked(8 + z),
-        *s.get_unchecked(4 + z),
-        *s.get_unchecked(4 + z),
-    );
+    let g = Vector4::new(s[12 + x], s[x], s[12 + x], s[x]);
+    let h = Vector4::new(s[4 + y], s[12 + y], s[y], s[8 + y]);
+    let i = Vector4::new(s[8 + z], s[8 + z], s[4 + z], s[4 + z]);
     let mut tmp = a.mul_element_wise(b.mul_element_wise(c));
     tmp += d.mul_element_wise(e.mul_element_wise(f));
     tmp += g.mul_element_wise(h.mul_element_wise(i));

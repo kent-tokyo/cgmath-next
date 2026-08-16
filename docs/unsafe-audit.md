@@ -17,7 +17,7 @@ macro across 7-9 types. Each group lists every source line it covers.
 |---|---|---|---|---|
 | UNSAFE-001 | repr(C) struct <-> fixed-size array transmute | yes | not without changing the public `From`/`AsRef`/`AsMut` API shape | audited sound |
 | UNSAFE-002 | repr(C) struct <-> homogeneous tuple transmute | yes | only the owned `Into<Tuple>` impl (already safe); `AsRef`/`AsMut`/`From<&_>` need a public API removal, see detail below | **guarded and audited.** A runtime layout check (`tuple_layout_matches!`) now runs before every transmute in this category, panicking instead of transmuting on a layout mismatch -- verified via Miri, disassembly (confirmed zero-cost when layout matches), and a negative-control test. Not a language-level soundness proof -- see the feasibility-study section below for exactly what is and isn't established |
-| UNSAFE-003 | `det_sub_proc_unsafe` (unchecked indexing) | yes, for `Matrix4::determinant` (unconditionally); no, for `Matrix4::invert`'s SIMD branch | yes, with a bounds-checked rewrite; likely no measurable cost given the caller already holds a `&Matrix4` | audited sound (see caveats) |
+| UNSAFE-003 | `det_sub_proc` (was `det_sub_proc_unsafe`, unchecked indexing) | n/a -- no longer `unsafe` | **done.** Replaced with bounds-checked indexing; release-build disassembly confirmed byte-identical machine code to the old unchecked version, i.e. zero cost, not just "likely" | **resolved -- removed from the unsafe inventory** |
 | UNSAFE-004 | `mem::uninitialized` + external `simd` crate SIMD load/store | **no -- dead code** | irrelevant while dead; would need a full rewrite before ever enabling | dead code, do not enable as-is |
 
 ---
@@ -411,50 +411,75 @@ introduced or overlooked.
 
 ---
 
-### UNSAFE-003: `det_sub_proc_unsafe`
+### UNSAFE-003: `det_sub_proc` (resolved -- was `det_sub_proc_unsafe`)
 
-**File/Function:** `src/matrix.rs:1739` (`unsafe fn det_sub_proc_unsafe`),
-called from `Matrix4::determinant` (`src/matrix.rs:865`, unconditional) and
-`Matrix4::invert`'s `#[cfg(feature = "simd")]` branch
-(`src/matrix.rs:922,930,931,932`).
+**A one-time feasibility study, explicitly scoped**, same category as the
+UNSAFE-002 layout guard: replace `get_unchecked` with plain bounds-checked
+indexing in this one function only, measure the actual release-build cost
+via disassembly (not a hand-wave), and adopt only if the cost is zero or
+negligible. **Answer: zero cost, confirmed by byte-identical disassembly,
+not estimated.** `det_sub_proc_unsafe` is renamed `det_sub_proc`, is no
+longer `unsafe fn`, and is removed from this audit's unsafe inventory --
+this category no longer exists in the crate.
 
-**Purpose:** compute cross-product-like sub-terms of the Matrix4 adjugate
-using `get_unchecked` on a `&[S; 16]` view of the matrix, avoiding bounds
-checks in a function called on every `determinant()`/`invert()` call.
+**File/Function (before):** `src/matrix.rs` (`unsafe fn
+det_sub_proc_unsafe`), called from `Matrix4::determinant` (unconditional)
+and `Matrix4::invert`'s `#[cfg(feature = "simd")]` branch (dead code, see
+UNSAFE-004).
 
-**Safety invariant:** `x`, `y`, `z` (and the derived offsets `x+4`, `x+8`,
-`x+12`, etc., all `< 16`) must be valid indices into the 16-element array,
-i.e. `x, y, z < 4`.
+**What changed:** every `*s.get_unchecked(N)` became `s[N]` (mechanical,
+`sed`-equivalent substitution, verified by diffing the transformed source
+against the original with only that substitution applied); the function's
+`unsafe fn` and every caller's wrapping `unsafe { }` block were removed,
+since indexing is the only operation the function ever performed --
+nothing else in its body was unsafe.
 
-**Caller requirements:** callers must only pass `x, y, z` in `0..4`.
+**Why zero cost, not just "likely":** every call site passes a literal
+constant for `x`/`y`/`z` (`1,2,3` / `0,3,2` / `0,1,3` / `0,2,1`), so LLVM
+can prove every derived index (`x`, `4+x`, `8+x`, `12+x`, etc.) is in
+`0..16` at compile time and elide the bounds check entirely -- the
+original audit predicted this ("almost certainly optimized away") but had
+not measured it. This session measured it: a probe crate (path-dependency
+on this crate, same technique as the UNSAFE-002 disassembly check) calling
+the public `Matrix4::<f64>::determinant()`/`invert()` entry points was
+compiled `--release` and disassembled with `otool -tV` (aarch64) both
+before and after the substitution. **The two disassemblies are
+byte-for-byte identical** (`diff` reports zero differences in the
+instruction stream, the only line that differs is an unrelated absolute
+file-path string embedded by the linker) -- not "similar," not "same
+instruction count," literally the same machine code. This is a stronger
+result than the UNSAFE-002 guard's (which added new, always-executed
+comparisons that had to be shown to fold away): here there was nothing to
+fold away because the safe and unsafe forms already lower to identical
+codegen once bounds are provably static.
 
-**Can safe Rust replace it?** Yes, trivially -- `s[4 + x]` instead of
-`s.get_unchecked(4 + x)` -- since every call site passes a literal constant
-(`1, 2, 3` / `0, 3, 2` / `0, 1, 3` / `0, 2, 1`), so the bounds check would
-be a compile-time-constant, almost certainly optimized away at `-O`, or at
-worst a handful of cheap comparisons on a function that also does 12+
-floating-point multiplications. This was **not changed** in this session
-(out of scope for the swap_columns fix, and AGENTS.md's performance policy
-says don't touch unrelated hot paths without a measured before/after), but
-is the clearest "safe Rust replace it" candidate in this audit for a future
-Phase 3 pass.
+**Verification performed:**
+- `cargo test --all-features`: all determinant/invert tests pass
+  (`matrix2/3/4::test_determinant`, `matrix2/3/4::test_invert`,
+  `test_invert_basis2/3`, transform's `test_invert`), same results as
+  before the change.
+- `cargo +nightly miri test --test matrix -- determinant invert`: 6/6
+  pass, no UB reported.
+- Release-build disassembly diff: zero instruction-level difference (see
+  above).
+- Full `cargo test --all-features`: 320/320 pass (306 pre-existing + 14
+  new UNSAFE-001 tests from this session), 0 regressions.
+- `cargo clippy --lib --tests --all-features`: no new warnings introduced
+  by this change (the only warning touching this file, `unexpected cfg
+  condition value: simd`, is the pre-existing UNSAFE-004 dead-code
+  finding, unrelated).
 
-**Miri coverage:** exercised indirectly -- `cargo +nightly miri test --test
-matrix` was run in this session (see docs/baseline.md and the fix commit)
-and every `determinant`/`invert` test passed under Miri with no UB
-reported for this function. (One unrelated failure was observed in that
-run, `matrix3::rotate_from_euler::test_y` -- a floating-point rounding
-difference between Miri's interpreter and native trig evaluation, not a
-memory-safety report; it doesn't touch this function or any matrix
-constructed with `#[cfg(feature = "simd")]`.)
+**Caveat still true:** `invert`'s `#[cfg(feature = "simd")]` branch (now
+calling the safe `det_sub_proc`) remains dead code in any standard build,
+same as before -- this change doesn't make it reachable, just removes one
+more `unsafe` from what would run if it ever were (see UNSAFE-004 below).
 
 **Tests:** `tests/matrix.rs` `test_determinant`, `test_invert` (pre-existing
 upstream tests, unmodified).
 
-**Status:** audited sound for all current call sites (all use literal
-in-range indices). All call sites within `invert`'s SIMD branch are dead
-code (see UNSAFE-004 -- `simd` is not a resolvable feature), so in a normal
-build only the `determinant()` call site is live.
+**Status:** resolved. No longer part of the unsafe inventory -- the crate
+now has 3 remaining unsafe pattern groups (UNSAFE-001, UNSAFE-002,
+UNSAFE-004), not 4.
 
 ---
 
@@ -517,17 +542,19 @@ quietly would read as more invasive than what was asked for.
 
 ## `#![deny(unsafe_op_in_unsafe_fn)]`
 
-Not added to the crate root in this session. AGENTS.md section 10 asks for
-this "once MSRV allows" and to add it incrementally if the audit isn't
-complete -- given `det_sub_proc_unsafe` (UNSAFE-003) is the only remaining
-`unsafe fn` in the crate, and its body's unsafe operations are already
-wrapped in the outer `unsafe fn`'s implicit unsafe scope (pre-2024-edition
-behavior, matching this crate's unspecified/2015 edition), adding the lint
-now would require either an edition bump (out of scope, MSRV not yet
-measured -- see the "next recommended work" section of the final report)
-or wrapping the 12 `get_unchecked` calls in their own inner `unsafe {}`
-blocks. Deferred to the MSRV-measurement phase so the two changes land
-together and can be evaluated as one unit.
+Not added to the crate root yet. **Update:** since UNSAFE-003's
+`det_sub_proc_unsafe` -- the only remaining `unsafe fn` in the crate --
+was resolved into a safe `fn` this session, there are now **zero
+`unsafe fn` in the crate** (confirmed: `grep -rn "unsafe fn" src/`
+returns nothing). `#![deny(unsafe_op_in_unsafe_fn)]` only changes
+behavior inside `unsafe fn` bodies (it requires an explicit inner
+`unsafe {}` around unsafe operations rather than inheriting the
+function's own unsafe scope); with none left, adding the lint would now
+be a zero-source-change, purely preventive addition rather than
+requiring the edition bump or call-site rewiring described above. Not
+added this session (out of scope for the UNSAFE-001/003 work actually
+requested), but flagged as newly low-cost, worth doing opportunistically
+in a future pass rather than deferred to an edition bump.
 
 ## SAFETY comments
 
