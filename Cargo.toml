@@ -14,6 +14,11 @@ readme = "README.md"
 
 keywords = ["gamedev", "math", "matrix", "vector", "quaternion"]
 
+# Restrict publish to crates.io specifically -- prevents an accidental
+# `cargo publish --registry <other>` from pushing this package somewhere
+# unintended.
+publish = ["crates-io"]
+
 # Raw stdout/stderr dumps from the one-time baseline run (docs/baseline.md,
 # docs/upstream-master-diff.md) -- useful as historical evidence on GitHub,
 # not needed by anyone consuming this crate as a dependency. ~1.2MB.

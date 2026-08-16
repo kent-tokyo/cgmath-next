@@ -12,10 +12,28 @@ on:
         description: "Type the exact version being published, to confirm this dispatch is intentional (e.g. 0.18.1-alpha.1)"
         required: true
 
+# Least-privilege: this job only needs to read the repo to check it out.
+permissions:
+  contents: read
+
+# Only one publish attempt can run at a time; never cancel one that's
+# already in flight (a cancelled cargo publish mid-upload is worse than
+# a queued duplicate waiting its turn).
+concurrency:
+  group: crates-io-publish
+  cancel-in-progress: false
+
 jobs:
   publish:
     name: cargo publish
     runs-on: ubuntu-latest
+    # TODO(not yet done): add `environment: crates-io` here once that
+    # environment exists with a required-reviewer protection rule
+    # configured in repo settings (Settings > Environments > New
+    # environment > crates-io > required reviewers). Deliberately not
+    # added yet -- referencing a not-yet-protected environment would
+    # claim a safety gate that isn't actually there. See
+    # docs/release-checklist.md for the exact setup this still needs.
     steps:
       - uses: actions/checkout@v4
 
