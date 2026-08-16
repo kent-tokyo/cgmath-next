@@ -1,15 +1,15 @@
 # Reverse-dependency migration fixtures (AGENTS.md §14)
 
-4 real crates.io reverse-dependencies of `cgmath` (of 280 total, filtered
+5 real crates.io reverse-dependencies of `cgmath` (of 280 total, filtered
 to `normal`-kind dependencies on `^0.18`/`^0.18.0`), spanning graphics,
-CAD/geometry, GPU-layout/serialization, and multi-backend-abstraction
-categories, downloaded as their published tarballs (same method as the
-crate's own provenance import) and tested both against real
-`cgmath = "0.18.0"` (baseline) and against `cgmath-next` via
+CAD/geometry, GPU-layout/serialization, multi-backend-abstraction, and
+3D-rendering-engine categories, downloaded as their published tarballs
+(same method as the crate's own provenance import) and tested both
+against real `cgmath = "0.18.0"` (baseline) and against `cgmath-next` via
 `cgmath = { package = "cgmath-next", path = "../../../.." }`.
 
-This meets AGENTS.md §20's "3件以上" alpha gate. 1 more is needed for the
-5-crate stable gate.
+This meets both AGENTS.md §20's "3件以上" alpha gate and the "5件以上"
+stable gate.
 
 **Not vendored into this repository.** The downloaded sources (and this
 analysis) were produced from the exact tarballs below; the source itself
@@ -31,6 +31,7 @@ tar xzf x.crate --strip-components=1 -C <dest>
 | `crevice` | 0.20.1 | `b3f5b73a35775798e5a941a98d3eda7dd6ac6ba4715bd3cce8fef6bdf1a74c91` |
 | `truck-base` | 0.5.0 | `4c279de9e92e5dc20a188deb0bb9a4bd421a6a185e57e03e19025e84a36c5a05` |
 | `vector-traits` | 0.6.2 | `f228b57b00a0cf34733af60bf2f071c90bf0f6432499c1f9cfd16d13bb4225a5` |
+| `three-d` | 0.19.0 | `e73bbcfd30f69623bed55b90bcc084d316fab03a490c2087935c2aa287bd6995` |
 
 ---
 
@@ -271,4 +272,46 @@ UA="cgmath-next-research/0.1 (<your email>)"
 curl -sL -A "$UA" "https://crates.io/api/v1/crates/vector-traits/0.6.2/download" -o x.crate
 tar xzf x.crate --strip-components=1 -C <dest>
 # then patch [dependencies.cgmath] in Cargo.toml to package="cgmath-next", path="<repo root>"
+```
+
+---
+
+```
+crate name: three-d
+original version: 0.19.0
+features: --no-default-features (default "window" feature pulls in glutin/winit/wasm-bindgen -- windowing/platform deps unrelated to the cgmath compatibility question this fixture tests; cgmath itself is a required, non-optional, non-gated dependency)
+original result: pass (cargo check, exit 0)
+cgmath-next result: pass (cargo check, exit 0)
+source changes required: none
+failure reason: n/a
+```
+
+A popular 2D/3D rendering engine (401K downloads on crates.io as of this
+writing), picked as the 5th fixture specifically for being a heavier,
+real-world consumer outside the graphics/CAD/GPU-layout categories the
+first four fixtures already covered. `cgmath` is used throughout for
+transform/projection math, not confined to a feature-gated subset.
+
+No `#[test]` functions exist in `three-d`'s own `src/` (confirmed by
+grep) -- same situation as the `arcball` fixture above. `cargo test
+--no-default-features --lib` runs 0 tests, 0 failed (nothing to run,
+not a skip). `cargo test --all-targets` (which would build the example
+binaries) was not attempted: three-d's dev-dependencies pull in `tokio`,
+`winit`, and windowing libraries needed only for its examples, not for
+testing `cgmath`/`cgmath-next` compatibility, and the same
+network/platform-dependent-build concern noted for `arcball`'s `cocoa`
+dev-dependency applies here too. `cargo check --no-default-features` is
+the correct-weight test for what this fixture is actually verifying.
+
+This meets the AGENTS.md §20 stable gate (5 total reverse-dependency
+fixtures).
+
+Reproduce with:
+
+```bash
+UA="cgmath-next-research/0.1 (<your email>)"
+curl -sL -A "$UA" "https://crates.io/api/v1/crates/three-d/0.19.0/download" -o x.crate
+tar xzf x.crate --strip-components=1 -C <dest>
+# then patch [dependencies.cgmath] in Cargo.toml to package="cgmath-next", path="<repo root>"
+# cargo check --no-default-features
 ```

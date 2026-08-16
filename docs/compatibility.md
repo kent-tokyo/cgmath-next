@@ -155,20 +155,20 @@ test).
 
 ## Reverse-dependency fixtures (AGENTS.md §14)
 
-See `compat/fixtures/reverse-deps/RESULTS.md` for the full record. 4 real
+See `compat/fixtures/reverse-deps/RESULTS.md` for the full record. 5 real
 crates.io reverse-dependencies verified against `cgmath-next` via the
 dependency-rename mechanism: `arcball` (camera control, pass, 0 changes),
 `crevice` (GPU/GLSL layout + mint interop, pass, 0 changes), `truck-base`
 (CAD kernel base, pass after 4 one-line changes -- a genuinely interesting
 multi-crate rename propagation case involving a third-party `cgmath`
 extension crate, not a `cgmath-next` compatibility gap; see the linked doc
-for the full diagnosis), and `vector-traits` (multi-backend vector-math
-trait abstraction, pass, 0 changes -- plus a compile-time type-identity
-check, not just a compile-success check, confirming values constructed via
-a direct `cgmath-next` dependency are the *identical* nominal type as what
+for the full diagnosis), `vector-traits` (multi-backend vector-math trait
+abstraction, pass, 0 changes -- plus a compile-time type-identity check,
+not just a compile-success check, confirming values constructed via a
+direct `cgmath-next` dependency are the *identical* nominal type as what
 the extension crate's trait impls expect once it migrates too, and
 correctly fail with a plain `E0277` trait-bound error, not a silent type
-split, when it hasn't).
+split, when it hasn't), and `three-d` (2D/3D rendering engine, pass, 0
+changes -- a heavier, non-optional, feature-ungated `cgmath` consumer).
 
-This meets the §20 alpha gate (3+). 1 more is needed for the §20 stable
-gate (5+).
+This meets both the §20 alpha gate (3+) and the §20 stable gate (5+).
