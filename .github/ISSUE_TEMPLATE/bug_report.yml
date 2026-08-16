@@ -1,0 +1,47 @@
+name: Bug report
+description: Something in cgmath-next doesn't work as expected (not a soundness/UB issue -- see below)
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for the report. **If this is a soundness issue (safe-Rust-reachable
+        undefined behavior), please use
+        [GitHub Security Advisories](https://github.com/kent-tokyo/cgmath-next/security/advisories/new)
+        instead of this form** -- see [SECURITY.md](../../SECURITY.md). Please
+        don't post UB repro cases in a public issue.
+  - type: textarea
+    id: description
+    attributes:
+      label: What happened
+      description: What did you expect, and what happened instead?
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Minimal reproduction
+      description: A small code snippet or `cargo test` case that reproduces it.
+      render: rust
+  - type: input
+    id: version
+    attributes:
+      label: cgmath-next version
+      placeholder: "0.18.1-alpha.1"
+    validations:
+      required: true
+  - type: input
+    id: rustc
+    attributes:
+      label: rustc version
+      placeholder: output of `rustc --version`
+  - type: checkboxes
+    id: features
+    attributes:
+      label: Features enabled
+      options:
+        - label: serde
+        - label: mint
+        - label: rand
+        - label: swizzle
+        - label: unstable

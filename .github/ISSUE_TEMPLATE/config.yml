@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Report a soundness / undefined-behavior issue
+    url: https://github.com/kent-tokyo/cgmath-next/security/advisories/new
+    about: Safe-Rust-reachable UB is a security issue, not a public bug report -- see SECURITY.md.
+  - name: Compatibility documentation
+    url: https://github.com/kent-tokyo/cgmath-next/blob/main/docs/compatibility.md
+    about: Check what's already been verified before filing a compatibility report.

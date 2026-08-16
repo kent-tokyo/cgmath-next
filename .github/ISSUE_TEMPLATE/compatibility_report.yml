@@ -1,0 +1,48 @@
+name: Compatibility difference from cgmath 0.18.0
+description: Something behaves differently after switching from cgmath to cgmath-next
+labels: ["compatibility"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        This is the single most valuable kind of report for this project right
+        now. See [docs/compatibility.md](../../docs/compatibility.md) for what's
+        already been verified (public API diff, differential tests against real
+        `cgmath` 0.18.0, reverse-dependency fixtures) and what hasn't -- your
+        report might be the first real-world case in an area that was only
+        checked synthetically so far.
+  - type: textarea
+    id: difference
+    attributes:
+      label: What differs
+      description: What does real `cgmath` 0.18.0 do, and what does `cgmath-next` do instead?
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Minimal reproduction
+      render: rust
+    validations:
+      required: true
+  - type: dropdown
+    id: category
+    attributes:
+      label: Category
+      options:
+        - Public API (compile error / missing item)
+        - Numeric result
+        - serde wire format
+        - mint conversion
+        - rand distribution
+        - swizzle
+        - Other
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: cgmath-next version
+      placeholder: "0.18.1-alpha.1"
+    validations:
+      required: true
