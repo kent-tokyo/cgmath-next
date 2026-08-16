@@ -203,6 +203,37 @@ those functions is the known-UB one -- see `docs/unsafe-audit.md` and the
 fix commit for why comparing against upstream's behavior for those
 specific functions isn't the right test).
 
+## `rand` feature verification
+
+Unlike `serde`/`mint` above, `rand`'s `Distribution` impls aren't
+byte-for-byte comparable at runtime -- a random sample is, by design, not
+a deterministic function of its inputs, so an exact-value differential
+test against upstream would either be meaningless (different RNG state)
+or would end up asserting an exact output sequence upstream never
+documented or guaranteed for a given seed. Verified instead:
+
+- **Every `Distribution` impl is source-identical to pristine 0.18.0.**
+  All 7 impl sites (`Vector1..4` via `impl_vector!`, `Matrix2/3/4`,
+  `Quaternion`, `Rad`/`Deg` via `impl_angle!`, `Euler`) diffed
+  byte-for-byte against `_extract/cgmath-0.18.0/` -- zero differences in
+  any impl body, not just "the same types implement the trait". This
+  crate has never touched rand-related code, so this is expected, but it
+  was verified rather than assumed.
+- **`tests/rand_distribution.rs`** (new, gated `#![cfg(feature = "rand")]`,
+  6 tests): confirms the existing contract these impls have always had --
+  every generated component is finite, and within its documented or
+  source-derivable range: `[0, 1)` for `Vector`/`Matrix`/`Quaternion`
+  components (rand's own `Standard: Distribution<f32/f64>` contract, which
+  these impls compose via `rng.gen()`), `[-π, π)` for `Rad` and
+  `[-180, 180)` for `Deg`/`Euler` (the literal bounds `impl_angle!` passes
+  to `rng.gen_range`). Plus a non-degeneracy sanity check (not a
+  statistical RNG-quality test, which would be flaky by nature -- just
+  confirming samples aren't all identical or all zero, which would
+  indicate broken RNG wiring). **6/6 pass.**
+- **Feature isolation**: `cargo tree` (no flags, and
+  `--no-default-features`) shows `rand` entirely absent from the
+  dependency graph, same check as `serde`/`mint`.
+
 ## Reverse-dependency fixtures (AGENTS.md §14)
 
 See `compat/fixtures/reverse-deps/RESULTS.md` for the full record. 5 real

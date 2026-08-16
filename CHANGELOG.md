@@ -76,6 +76,12 @@ as part of the faithful 0.18.0 import (see `docs/provenance.md`).
    `Matrix::row()` on an asymmetric matrix, not just the column), and
    `mint::Quaternion.s`/`.v` and `mint::EulerAngles.a/b/c` map correctly.
    All pass.
+ - Added `tests/rand_distribution.rs` (6 tests): confirms every
+   `Distribution` impl's generated values are finite and within their
+   documented/derivable range. Every `Distribution` impl was also
+   confirmed byte-for-byte identical to pristine `cgmath` 0.18.0's
+   source. Deliberately doesn't assert an exact RNG output sequence,
+   since upstream never guaranteed one for a given seed.
  - Renamed package to `cgmath-next` (crates.io name only —
    `[lib] name = "cgmath"` is unchanged, so `use cgmath::...` still works).
    Version set to `0.18.1-alpha.1` to signal this is a patch series on top
