@@ -5,6 +5,8 @@
 [![crates.io](https://img.shields.io/crates/v/cgmath-next.svg)](https://crates.io/crates/cgmath-next)
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](https://github.com/kent-tokyo/cgmath-next/blob/main/LICENSE)
 
+English | [日本語](README_ja.md) | [中文](README_zh.md)
+
 A maintained, soundness-focused, source-compatible successor to cgmath 0.18.
 
 > Keep the API. Remove the unsoundness.
