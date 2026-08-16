@@ -74,3 +74,36 @@ unmodified baseline). All non-zero exits are either upstream-vs-toolchain
 drift (warnings, fmt) or an upstream characteristic that predates this fork
 (nightly-only benches). None require paving over per AGENTS.md §21 — none
 involve public API, soundness, licensing, numeric results, or serialization.
+
+## Addendum: Miri findings (recorded after the swap_columns fix, Phase 2)
+
+Two Miri-specific characteristics of the *pristine, unmodified* 0.18.0
+source were confirmed after the fact, while double-checking the fix didn't
+change numeric behavior:
+
+1. **`cargo +nightly miri test --test matrix` on pristine 0.18.0 aborts
+   immediately** on `matrix2::test_transpose_self`, with a real Stacked
+   Borrows UB report at `src/matrix.rs:590` inside `Matrix2::swap_elements`
+   (called by `transpose_self`) — the exact same class of bug as
+   RUSTSEC-2026-0197, but reached through `(0,1)`/`(1,0)`, genuinely
+   distinct cells, via a completely ordinary API (`transpose_self`), not an
+   edge-case same-index call. This is additional confirmation (beyond
+   `tests/soundness/`) that the swap_elements/swap_columns fix in this
+   fork addresses more than the advisory's literal same-index example —
+   see `docs/unsafe-audit.md` and the fix commit.
+2. **`rotate_from_euler::test_y` is flaky under Miri, independent of this
+   fork's changes.** Running the full `--test matrix` suite (294 tests via
+   `cargo test`, or the Miri equivalent) against the *fixed* source showed
+   one failure in this test (`assert_ulps_eq!` off by ~7e-16, i.e. a
+   handful of ULPs). Isolating just this test
+   (`cargo +nightly miri test --test matrix rotate_from_euler::test_y`)
+   passes cleanly on *both* the pristine, unmodified source and the fixed
+   source, with identical timing. This points to Miri's own documented
+   intentional non-determinism in floating-point/transcendental-function
+   evaluation (not a native-vs-Miri rounding difference as originally
+   guessed, and not anything in this fork's diff, which never touches
+   trigonometry or Euler-angle code) — the test's pass/fail outcome
+   depends on Miri's run conditions, not on source changes. Recorded here
+   rather than "fixed" per AGENTS.md's rule against loosening tolerances
+   to hide numeric differences: this isn't a numeric difference this fork
+   introduced, so there is nothing here to fix.
