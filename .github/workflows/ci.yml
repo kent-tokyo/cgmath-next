@@ -79,6 +79,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
+      # cargo-deny generates its own lockfile internally, but
+      # rustsec/audit-check needs one already on disk to scan -- this repo
+      # is a library and correctly doesn't commit Cargo.lock (see
+      # .gitignore), so generate an ephemeral one here, CI-only.
+      - run: cargo generate-lockfile
       - uses: rustsec/audit-check@v2
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
