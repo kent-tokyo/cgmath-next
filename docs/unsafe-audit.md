@@ -345,10 +345,14 @@ deliberately-wrong ones, can be unsound.
   signature changed.
 - All 6 pairwise feature combinations (`docs/compatibility.md`) re-run:
   still 0 failures.
-- Reverse-dependency fixtures spot-checked against the updated source:
-  `vector-traits` (13/13), `three-d` (`cargo check`, clean), and the
-  `dual-dep` differential suite against real `cgmath` 0.18.0 (9/9,
-  bit-identical numeric output) -- all still pass unmodified.
+- All 5 reverse-dependency fixtures re-verified against the guard-updated
+  source, not just a sample: `arcball` (`cargo check`, clean),
+  `crevice` (13/13), `truck-base` (55/55, after re-applying the same
+  documented 4-line qualification fix -- unrelated to this change, see
+  `compat/fixtures/reverse-deps/RESULTS.md`), `vector-traits` (13/13),
+  `three-d` (`cargo check`, clean). Plus the `dual-dep` differential
+  suite against real `cgmath` 0.18.0 (9/9, bit-identical numeric output).
+  All still pass unmodified.
 
 ### Remaining assumptions and limits
 
