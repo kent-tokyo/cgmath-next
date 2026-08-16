@@ -16,7 +16,7 @@ macro across 7-9 types. Each group lists every source line it covers.
 | ID | Pattern | Reachable in default/normal builds? | Can safe Rust replace it? | Status |
 |---|---|---|---|---|
 | UNSAFE-001 | repr(C) struct <-> fixed-size array transmute | yes | not without changing the public `From`/`AsRef`/`AsMut` API shape | audited sound |
-| UNSAFE-002 | repr(C) struct <-> homogeneous tuple transmute | yes | only the owned `Into<Tuple>` impl (already safe); `AsRef`/`AsMut`/`From<&_>` need a public API removal, see detail below | **flagged -- still unverified.** Confirmed empirically that `-Zrandomize-layout` does not randomize tuple layout at all (only structs/enums); independently corroborated as a known unresolved upstream issue, [`rustgd/cgmath#538`](https://github.com/rustgd/cgmath/issues/538) (open since 2021) |
+| UNSAFE-002 | repr(C) struct <-> homogeneous tuple transmute | yes | only the owned `Into<Tuple>` impl (already safe); `AsRef`/`AsMut`/`From<&_>` need a public API removal, see detail below | **guarded and audited.** A runtime layout check (`tuple_layout_matches!`) now runs before every transmute in this category, panicking instead of transmuting on a layout mismatch -- verified via Miri, disassembly (confirmed zero-cost when layout matches), and a negative-control test. Not a language-level soundness proof -- see the feasibility-study section below for exactly what is and isn't established |
 | UNSAFE-003 | `det_sub_proc_unsafe` (unchecked indexing) | yes, for `Matrix4::determinant` (unconditionally); no, for `Matrix4::invert`'s SIMD branch | yes, with a bounds-checked rewrite; likely no measurable cost given the caller already holds a `&Matrix4` | audited sound (see caveats) |
 | UNSAFE-004 | `mem::uninitialized` + external `simd` crate SIMD load/store | **no -- dead code** | irrelevant while dead; would need a full rewrite before ever enabling | dead code, do not enable as-is |
 
@@ -189,14 +189,204 @@ upstream's own conclusion: the only real fix is removing the
 reference-returning impls, which is a public API change and therefore
 AGENTS.md stop-and-report territory, not something to do unilaterally.
 
-**Status:** still flagged, not fixed, and **not meaningfully re-verified**
-despite the `-Zrandomize-layout` attempt -- see above for why that attempt
-doesn't apply to tuples. Independently corroborated as a known, unresolved,
-maintainer-acknowledged upstream issue (`rustgd/cgmath#538`), not something
-this fork introduced or overlooked. The only real fix -- removing
-`AsRef<Tuple>`/`AsMut<Tuple>`/`From<&Tuple>`/`From<&mut Tuple>` -- is a
-public API removal and out of scope for this phase; recommended as a
-Yellow/Red decision for a future phase rather than attempted here.
+**Status (superseded by the layout-guard feasibility study below):** the
+paragraph above described the state before a runtime layout guard was
+implemented and verified. See the next section for the current status.
+
+## UNSAFE-002 layout-guard feasibility study
+
+A one-time feasibility study, explicitly scoped and approved as such (not
+a general go-ahead to keep iterating on this indefinitely): can a runtime
+check, evaluated before every tuple transmute, convert a hypothetical
+future layout divergence from silent UB into a detected, loud failure --
+without changing the public API, without raising the MSRV, and ideally at
+zero cost when the layout actually matches (the case today, on every
+platform this crate has ever been tested on)?
+
+**Answer: yes, on all three counts, verified rather than assumed.**
+
+### What the guard is, and precisely what it does and does not prove
+
+Every one of the 32 conversion sites this section covers (8 types --
+`Vector1/2/3/4`, `Point1/2/3`, `Quaternion` -- x 4 directions each --
+`AsRef`, `AsMut`, `From<&Tuple>`, `From<&mut Tuple>`) now runs this check
+immediately before its `mem::transmute` call:
+
+```rust
+assert!(
+    tuple_layout_matches!(Vector4<S> { x: 0, y: 1, z: 2, w: 3 }, (S, S, S, S)),
+    "cgmath-next: internal invariant violated -- ..."
+);
+```
+
+`tuple_layout_matches!` (defined once in `src/macros.rs`, reused by every
+macro-generated type; `Quaternion` has a hand-written equivalent,
+`quaternion_tuple_layout_matches`, since its fields are nested through
+`v: Vector3<S>` rather than flat) checks, at the point of the call:
+
+1. `size_of::<Struct<S>>() == size_of::<Tuple>()`
+2. `align_of::<Struct<S>>() == align_of::<Tuple>()`
+3. every field's byte offset in `Struct<S>` equals the corresponding
+   positional element's byte offset in `Tuple`
+
+Offsets are computed via `addr_of!` on `MaybeUninit` storage and pointer
+subtraction, not `core::mem::offset_of!` -- see the MSRV section below for
+why. If any of the three checks fails, the code `panic!`s (via `assert!`)
+instead of transmuting.
+
+**This does NOT make the transmute language-guaranteed sound.** Plain
+Rust tuple layout remains unspecified by the language reference; nothing
+in this guard changes that fact, and nothing could without either
+`#[repr(C)]` on tuples (not a thing Rust has) or removing the
+reference-returning conversions entirely (the actual fix, per both this
+audit's original conclusion and upstream's own `rustgd/cgmath#538`
+collaborator, and still out of scope here as a public API change). What
+the guard *does* provide: the specific failure mode this audit is
+concerned with -- a future rustc, a future target, or a future
+codegen-flag combination silently laying tuples out differently than this
+crate's structs -- stops being silent memory corruption and becomes an
+immediate, loud, deterministic panic, on the very first call after the
+divergence, on this platform, in this binary. That is a real, meaningful
+safety improvement over the unguarded transmute. It is a tripwire, not a
+proof, and the entry below is worded to keep that distinction explicit
+rather than imply more than was actually established.
+
+### MSRV: three options compared, one required no tradeoff
+
+`std::mem::offset_of!` (including tuple-index syntax, `offset_of!((S,S,S,S), 0)`)
+was confirmed empirically, not assumed from documentation, to require
+Rust 1.77: fails with `error[E0658]: use of unstable library feature` on
+1.74.0, compiles and runs correctly on 1.77.0, both tested directly on
+locally-installed toolchains. This crate's declared MSRV is 1.71
+(`docs/msrv.md`), so building the guard on `offset_of!` would have forced
+an MSRV bump.
+
+A portable equivalent -- `addr_of!` on `MaybeUninit` storage plus pointer
+subtraction, computing exactly the same byte offsets without the macro --
+was built and cross-checked against `offset_of!`'s output on a 1.77+
+toolchain (both agree exactly, for `f32`, `f64`, and `i32` component
+types), then confirmed to compile and run correctly standalone on Rust
+1.71.0 itself, with no unstable features. `MaybeUninit` (stable since
+1.36) and `addr_of!` (stable since 1.51) both predate the declared MSRV
+by years.
+
+| Option | Outcome |
+|---|---|
+| (a) Internal MSRV-1.71-compatible helper | **Chosen and implemented.** No dependency, no MSRV change, verified to compile and pass the full test suite on both stable and 1.71.0 directly. |
+| (b) Minimal dependency (e.g. `memoffset`) | Not needed -- (a) achieves the same thing with zero added dependencies once the portable pointer-arithmetic approach was confirmed to work, so this option has no advantage over (a) and wasn't pursued further. |
+| (c) MSRV bump to 1.77 | Not needed, and correctly not done -- an MSRV change is an AGENTS.md stop-and-report item regardless of whether this study needed it, which it didn't. |
+
+### Coverage
+
+All 32 sites: `Vector1/2/3/4` and `Point1/2/3` via the shared
+`impl_tuple_conversions!` macro (`src/macros.rs`, invoked from
+`src/vector.rs`/`src/point.rs` with explicit tuple-index annotations added
+to each call site), and `Quaternion` by hand (`src/quaternion.rs`, guarded
+via `assert_quaternion_tuple_layout!`). Every `AsRef`/`AsMut`/
+`From<&Tuple>`/`From<&mut Tuple>` impl in this category now runs the
+check; the already-safe owned `Into<Tuple>`/`From<Tuple>` impls are
+unaffected (they never transmuted anything).
+
+### Negative control
+
+`src/macros.rs`, `mod tuple_layout_guard_tests` (new, `#[cfg(test)]`,
+3 tests): `accepts_the_real_correct_mapping` (positive control -- the
+real `Vector4<f32>`/`Vector4<f64>` mapping used by the crate's own call
+sites passes, or the guard would break every tuple conversion in the
+crate), `rejects_a_scrambled_field_to_index_mapping` (the actual negative
+control -- deliberately invokes `tuple_layout_matches!` with a reversed
+field/index mapping against the *real* `Vector4<f32>` type and asserts it
+returns `false`), and `rejects_a_size_mismatch` (same macro, a
+differently-sized tuple type). All three call the boolean-returning
+`tuple_layout_matches!` macro directly and never call `mem::transmute` --
+`addr_of!` on `MaybeUninit` storage never reads the pointee or creates a
+reference, so nothing in any of the three tests, including the two
+deliberately-wrong ones, can be unsound.
+
+### Verification performed
+
+- `cargo test --all-features`: 306/306 pass (303 previously + 3 new guard
+  tests), 0 failed, both on stable and on `cargo +1.71.0 test
+  --all-features` directly against the real 1.71.0 toolchain.
+- `cargo +nightly miri test --lib -- test_as_ref test_as_mut test_into
+  test_from`: 24/24 pass, both with and without
+  `MIRIFLAGS="-Zmiri-strict-provenance"`. (The full unfiltered `--lib`
+  Miri run has 2-3 unrelated, pre-existing, non-deterministic
+  `assert_ulps_eq!` failures in `slerp` -- confirmed by re-running the
+  identical command against the pre-guard commit, same failure class
+  recorded in `docs/baseline.md` for `rotate_from_euler::test_y` -- not
+  a regression, filtered out of this specific check for signal clarity.)
+- `mod tuple_layout_guard_tests`'s 3 tests: pass under both plain
+  `cargo test` and `cargo +nightly miri test` with strict provenance.
+- Release-build disassembly (the authoritative check per the study's own
+  brief -- a microbenchmark's noise floor would have been too coarse to
+  trust either way): a probe crate depending on `cgmath-next` via `path`,
+  compiled `--release` with `opt-level = 3`, disassembled with `otool
+  -tV` (aarch64). **First attempt failed this check**: the guard's
+  offset computation constant-folded to literal values as hoped, but
+  comparing two `[usize; 4]` arrays with `==` left a real runtime
+  load+compare+branch in the compiled output for `Vector4<f32>::as_ref`
+  -- a genuine, if small, non-zero cost, not a rounding error. Rewritten
+  as a chain of individually-compared scalar offsets (`a == b && c == d
+  && ...` instead of `[a,c] == [b,d]`); re-disassembled, and this form
+  **fully constant-folds away** -- `Vector4<f32>::as_ref`,
+  `Vector4<f64>::as_mut`, and `Quaternion<f32>::as_ref` all compile to
+  pure arithmetic with zero guard overhead in the release build (the
+  `Quaternion` and first `Vector4` probes even end up byte-identical and
+  get linker-merged into one symbol, which is itself confirmation the
+  Quaternion guard folded away too -- differing guard overhead would have
+  produced different machine code). The array-vs-chain distinction is
+  recorded on `tuple_layout_matches!`'s doc comment so it isn't
+  accidentally reintroduced.
+- Public API diff: regenerated via the same `cargo +nightly rustdoc
+  --all-features -- -Zunstable-options --output-format json` method as
+  `docs/api-inventory.md`. **Still zero-line diff, 2867/2867 entries
+  match** -- the guard is entirely internal to function bodies, no
+  signature changed.
+- All 6 pairwise feature combinations (`docs/compatibility.md`) re-run:
+  still 0 failures.
+- Reverse-dependency fixtures spot-checked against the updated source:
+  `vector-traits` (13/13), `three-d` (`cargo check`, clean), and the
+  `dual-dep` differential suite against real `cgmath` 0.18.0 (9/9,
+  bit-identical numeric output) -- all still pass unmodified.
+
+### Remaining assumptions and limits
+
+- **This is a tripwire, not a soundness proof.** Tuple layout is still
+  officially unspecified by the Rust reference; the guard changes the
+  failure mode of a hypothetical future divergence, it does not make the
+  transmute itself language-guaranteed.
+- **Scope is exactly UNSAFE-002.** This guard does nothing for
+  UNSAFE-001, UNSAFE-003, or UNSAFE-004 -- those are unaffected, tracked
+  separately below.
+- **The guard itself adds a small amount of new `unsafe`** (`addr_of!` on
+  `MaybeUninit` storage, in `tuple_layout_matches!` and
+  `quaternion_tuple_layout_matches`). This pattern is sound by
+  construction -- `addr_of!` never reads the pointee or creates a
+  reference, confirmed clean under Miri with strict provenance -- and is
+  a well-established technique (it's essentially what `offset_of!` and
+  crates like `memoffset` do internally). Trading a small amount of
+  narrowly-scoped, mechanically-verified unsafe for eliminating silent-UB
+  risk in a much larger, unverifiable unsafe surface is the actual trade
+  being made here, and is recorded as such rather than presented as "zero
+  unsafe added."
+- **Every call is checked, not just the first.** There's no
+  once-per-process caching; each call recomputes and re-verifies. This
+  was a deliberate choice matching the study's brief (a release-effective
+  check, not a debug-only one) and is what made the constant-folding
+  question meaningful to ask in the first place -- confirmed to be free
+  when it folds, and correctly loud (not silently skipped) on platforms
+  where it somehow doesn't.
+
+**Status:** upgraded from "flagged, unverified" to **guarded and
+audited** -- the silent-UB failure mode is now a verified, zero-cost (in
+the matching case, confirmed via disassembly) runtime tripwire instead of
+an unverifiable assumption. The underlying language-level fact that plain
+tuple layout is unspecified is unchanged and cannot be fully closed
+without removing the reference-returning conversions (a public API
+change, still out of scope). Independently corroborated as a known,
+upstream-unresolved issue (`rustgd/cgmath#538`), not something this fork
+introduced or overlooked.
 
 ---
 

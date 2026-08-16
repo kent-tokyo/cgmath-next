@@ -600,15 +600,64 @@ impl<S: BaseFloat> Into<(S, S, S, S)> for Quaternion<S> {
     }
 }
 
+// Runtime layout guard for Quaternion<S> <-> (S, S, S, S), same tripwire
+// approach and same caveats as `tuple_layout_matches!` in macros.rs
+// (docs/unsafe-audit.md UNSAFE-002) -- written by hand rather than via
+// that macro because Quaternion's fields (`v.x`/`v.y`/`v.z`/`s`) aren't a
+// flat field list, they're nested through the `v: Vector3<S>` field.
+//
+// SAFETY: `addr_of!` never reads the pointee and never creates a
+// reference (including through the nested `.v.x`/`.v.y`/`.v.z`
+// projections), so this is sound on uninitialized `MaybeUninit` storage.
+//
+// Written as a chain of individually-compared scalar offsets, not as
+// two `[usize; 4]` arrays compared with `==` -- see the comment on
+// `tuple_layout_matches!` in macros.rs for why (the array form was
+// empirically confirmed not to constant-fold away in release builds;
+// this form was).
+#[inline]
+fn quaternion_tuple_layout_matches<S>() -> bool {
+    use std::mem::{align_of, size_of, MaybeUninit};
+    use std::ptr::addr_of;
+
+    size_of::<Quaternion<S>>() == size_of::<(S, S, S, S)>()
+        && align_of::<Quaternion<S>>() == align_of::<(S, S, S, S)>()
+        && {
+            let q = MaybeUninit::<Quaternion<S>>::uninit();
+            let q_base = q.as_ptr() as usize;
+            let t = MaybeUninit::<(S, S, S, S)>::uninit();
+            let t_base = t.as_ptr() as usize;
+            unsafe {
+                (addr_of!((*q.as_ptr()).v.x) as usize - q_base)
+                    == (addr_of!((*t.as_ptr()).0) as usize - t_base)
+                    && (addr_of!((*q.as_ptr()).v.y) as usize - q_base)
+                        == (addr_of!((*t.as_ptr()).1) as usize - t_base)
+                    && (addr_of!((*q.as_ptr()).v.z) as usize - q_base)
+                        == (addr_of!((*t.as_ptr()).2) as usize - t_base)
+                    && (addr_of!((*q.as_ptr()).s) as usize - q_base)
+                        == (addr_of!((*t.as_ptr()).3) as usize - t_base)
+            }
+        }
+}
+
+macro_rules! assert_quaternion_tuple_layout {
+    ($S:ty) => {
+        assert!(
+            quaternion_tuple_layout_matches::<$S>(),
+            "cgmath-next: internal invariant violated -- Quaternion<{}> and \
+             (S, S, S, S) have diverged in memory layout on this platform; \
+             refusing to transmute (see docs/unsafe-audit.md UNSAFE-002)",
+            stringify!($S)
+        );
+    };
+}
+
 impl<S: BaseFloat> AsRef<(S, S, S, S)> for Quaternion<S> {
     #[inline]
     fn as_ref(&self) -> &(S, S, S, S) {
-        // SAFETY: relies on `(S, S, S, S)`'s in-memory field order matching
-        // `Quaternion<S>`'s `#[repr(C)]` `[v.x, v.y, v.z, s]` order. NOT
-        // guaranteed by the language reference (plain tuple layout is
-        // unspecified), but stable in practice under current rustc for a
-        // homogeneous same-size, same-align tuple. See
-        // docs/unsafe-audit.md UNSAFE-002.
+        // SAFETY: guarded -- see `quaternion_tuple_layout_matches` above
+        // and docs/unsafe-audit.md UNSAFE-002.
+        assert_quaternion_tuple_layout!(S);
         unsafe { mem::transmute(self) }
     }
 }
@@ -617,6 +666,7 @@ impl<S: BaseFloat> AsMut<(S, S, S, S)> for Quaternion<S> {
     #[inline]
     fn as_mut(&mut self) -> &mut (S, S, S, S) {
         // SAFETY: see `AsRef` above (docs/unsafe-audit.md UNSAFE-002).
+        assert_quaternion_tuple_layout!(S);
         unsafe { mem::transmute(self) }
     }
 }
@@ -635,6 +685,7 @@ impl<'a, S: BaseFloat> From<&'a (S, S, S, S)> for &'a Quaternion<S> {
     fn from(v: &'a (S, S, S, S)) -> &'a Quaternion<S> {
         // SAFETY: see the `AsRef<(S, S, S, S)>` impl above
         // (docs/unsafe-audit.md UNSAFE-002).
+        assert_quaternion_tuple_layout!(S);
         unsafe { mem::transmute(v) }
     }
 }
@@ -644,6 +695,7 @@ impl<'a, S: BaseFloat> From<&'a mut (S, S, S, S)> for &'a mut Quaternion<S> {
     fn from(v: &'a mut (S, S, S, S)) -> &'a mut Quaternion<S> {
         // SAFETY: see the `AsMut<(S, S, S, S)>` impl above
         // (docs/unsafe-audit.md UNSAFE-002).
+        assert_quaternion_tuple_layout!(S);
         unsafe { mem::transmute(v) }
     }
 }

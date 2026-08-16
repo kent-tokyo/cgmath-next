@@ -359,9 +359,9 @@ impl_fixed_array_conversions!(Point1<S> { x: 0 }, 1);
 impl_fixed_array_conversions!(Point2<S> { x: 0, y: 1 }, 2);
 impl_fixed_array_conversions!(Point3<S> { x: 0, y: 1, z: 2 }, 3);
 
-impl_tuple_conversions!(Point1<S> { x }, (S,));
-impl_tuple_conversions!(Point2<S> { x, y }, (S, S));
-impl_tuple_conversions!(Point3<S> { x, y, z }, (S, S, S));
+impl_tuple_conversions!(Point1<S> { x: 0 }, (S,));
+impl_tuple_conversions!(Point2<S> { x: 0, y: 1 }, (S, S));
+impl_tuple_conversions!(Point3<S> { x: 0, y: 1, z: 2 }, (S, S, S));
 
 #[cfg(feature = "mint")]
 impl_mint_conversions!(Point2 { x, y }, Point2);

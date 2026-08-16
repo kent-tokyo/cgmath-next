@@ -31,6 +31,18 @@ as part of the faithful 0.18.0 import (see `docs/provenance.md`).
 
 ### Changed
 
+ - **UNSAFE-002 (tuple-layout transmute) is now guarded.** `AsRef`/
+   `AsMut`/`From<&Tuple>`/`From<&mut Tuple>` conversions between
+   `Vector1..4`/`Point1..3`/`Quaternion` and their homogeneous-tuple forms
+   now verify size, alignment, and per-field byte offsets at runtime
+   before transmuting, and panic instead of transmuting if they don't
+   match. Confirmed via release-build disassembly to compile away to zero
+   overhead when layout matches (as it does on every platform tested).
+   This is a runtime tripwire, not a language-level soundness proof —
+   plain tuple layout remains unspecified by the Rust reference; see
+   `docs/unsafe-audit.md`'s feasibility-study section for exactly what is
+   and isn't established, and for the MSRV-compatibility analysis behind
+   this specific implementation choice.
  - Renamed package to `cgmath-next` (crates.io name only —
    `[lib] name = "cgmath"` is unchanged, so `use cgmath::...` still works).
    Version set to `0.18.1-alpha.1` to signal this is a patch series on top

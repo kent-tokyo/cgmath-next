@@ -59,16 +59,23 @@ where a rename isn't even necessary.
 
 * **Not a "100% memory safe" or "fully audited" claim.** Soundness work is
   ongoing and tracked item-by-item in
-  [`docs/unsafe-audit.md`](docs/unsafe-audit.md). As of this writing, one
-  category of existing unsafe code (`AsRef`/`AsMut`/`From` conversions to
-  homogeneous tuples, e.g. `(f32, f32, f32)`) relies on tuple memory layout
-  that Rust's language reference does not formally guarantee — flagged as
-  `UNSAFE-002`. `-Zrandomize-layout` was tried as a stress test and
-  confirmed *not* to cover tuple types at all, so this risk remains
-  unverified by any tool available in this project so far; independently
-  corroborated as a 5-year-open upstream issue
-  ([`rustgd/cgmath#538`](https://github.com/rustgd/cgmath/issues/538)), not
-  something specific to this fork.
+  [`docs/unsafe-audit.md`](docs/unsafe-audit.md). One category of existing
+  unsafe code (`AsRef`/`AsMut`/`From` conversions to homogeneous tuples,
+  e.g. `(f32, f32, f32)`) relies on tuple memory layout that Rust's
+  language reference does not formally guarantee — flagged as
+  `UNSAFE-002`. This is now **guarded**: a runtime check verifies size,
+  alignment, and per-field byte offsets before every such conversion and
+  panics instead of transmuting if they don't match (verified via Miri,
+  a negative-control test, and release-build disassembly confirming zero
+  cost when layout matches, as it does today). This converts a
+  hypothetical future layout divergence from silent undefined behavior
+  into a loud, immediate panic — it is **not** a language-level soundness
+  proof; tuple layout remains officially unspecified, and the only way to
+  fully close this out would be removing the reference-returning
+  conversions (a public API change, out of scope for this series). See
+  `docs/unsafe-audit.md`'s feasibility-study section for the full
+  writeup, and [`rustgd/cgmath#538`](https://github.com/rustgd/cgmath/issues/538)
+  for independent corroboration that this isn't specific to this fork.
 * **No Rust ABI compatibility guarantee.** `#[repr(C)]` layout (`size_of`,
   `align_of`, field offsets) is verified specifically for types that
   declare it, not implied crate-wide.

@@ -381,10 +381,10 @@ impl_fixed_array_conversions!(Vector2<S> { x: 0, y: 1 }, 2);
 impl_fixed_array_conversions!(Vector3<S> { x: 0, y: 1, z: 2 }, 3);
 impl_fixed_array_conversions!(Vector4<S> { x: 0, y: 1, z: 2, w: 3 }, 4);
 
-impl_tuple_conversions!(Vector1<S> { x }, (S,));
-impl_tuple_conversions!(Vector2<S> { x, y }, (S, S));
-impl_tuple_conversions!(Vector3<S> { x, y, z }, (S, S, S));
-impl_tuple_conversions!(Vector4<S> { x, y, z, w }, (S, S, S, S));
+impl_tuple_conversions!(Vector1<S> { x: 0 }, (S,));
+impl_tuple_conversions!(Vector2<S> { x: 0, y: 1 }, (S, S));
+impl_tuple_conversions!(Vector3<S> { x: 0, y: 1, z: 2 }, (S, S, S));
+impl_tuple_conversions!(Vector4<S> { x: 0, y: 1, z: 2, w: 3 }, (S, S, S, S));
 
 impl<S: BaseNum> Vector1<S> {
     /// A unit vector in the `x` direction.

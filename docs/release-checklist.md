@@ -35,7 +35,7 @@ approval (§21) -- this document does not constitute that approval.
 | # | Condition | Status |
 |---|---|---|
 | 1 | 未説明のpublic API削除がゼロ | met -- zero API diff |
-| 2 | 既知のsafe-to-UB経路がゼロ | **not met** -- `UNSAFE-002` (tuple-layout transmute) remains unverified; `-Zrandomize-layout` was attempted and confirmed not to cover this case; independently corroborated as an unresolved upstream issue since 2021 (`rustgd/cgmath#538`), whose own collaborator concluded the only real fix is removing the reference-returning impls -- a public API change, out of scope here (see `docs/unsafe-audit.md`) |
+| 2 | 既知のsafe-to-UB経路がゼロ | **guarded, not literally zero** -- `UNSAFE-002` (tuple-layout transmute) now runs a runtime layout check (size/align/per-field offset) before every transmute in this category, panicking instead of transmuting on a mismatch; verified via Miri, a negative-control test, and release-build disassembly confirming zero cost when layout matches (see `docs/unsafe-audit.md`'s feasibility-study section). This converts the failure mode from silent UB to a loud panic -- it is **not** a language-level soundness proof, tuple layout remains officially unspecified, so this row is "guarded" rather than truly "met" |
 | 3 | 残存unsafeのinvariantが文書化されている | met -- `docs/unsafe-audit.md` |
 | 4 | release対象unsafe testがMiriで通る | met for what exists (`tests/soundness/`); `UNSAFE-001`/`003`/`004` don't have dedicated Miri regression tests, only the audit's evidence |
 | 5 | serde、mint、rand、swizzleの互換性が検証されている | mostly -- individual-feature and all 6 pairwise-combination `cargo test` runs pass for all 4 (`docs/compatibility.md`); no dedicated round-trip/format-stability test beyond what upstream's own tests already cover |
@@ -49,13 +49,36 @@ approval (§21) -- this document does not constitute that approval.
 
 ## Outstanding work before stable, in priority order
 
-1. Resolve or formally accept `UNSAFE-002`'s risk (either rewrite the
-   tuple transmutes as safe field-by-field code, or get a stronger
-   verification than `-Zrandomize-layout` provides).
+1. ~~Resolve or formally accept `UNSAFE-002`'s risk~~ -- a runtime
+   layout guard was implemented and verified (feasibility study
+   approved and completed), see row 2 above and
+   `docs/unsafe-audit.md`. Converts silent UB to a detected panic;
+   does not make tuple layout language-guaranteed, which remains
+   impossible without removing the reference-returning conversions
+   (a public API change, still out of scope).
 2. ~~1 more reverse-dependency fixture~~ -- done, see row 6 (`three-d`).
 3. ~~`cargo audit` and `cargo deny check`~~ -- done, see row 9 above.
 4. ~~CI: 3-platform matrix~~ -- configured and verified by real
    `origin/main` Actions runs, see row 8 above.
 5. ~~Pairwise feature combination testing~~ -- done, see row 5 (all 6
    pairs pass, purely additive, no interaction issues).
-6. Human review and explicit publish approval.
+6. **New, before rows 4/5 above can be marked fully met** (explicitly
+   requested as a follow-up phase, sequenced after the guard study, not
+   interleaved with it):
+   - Dedicated Miri regression test for UNSAFE-001 (array reference
+     conversion), matching the coverage `tests/soundness/` already gives
+     the swap_columns/swap_elements fix.
+   - Before/after benchmark for UNSAFE-003 if its unchecked indexing
+     were replaced with safe indexing (currently audited sound as-is,
+     not blocking, but the comparison hasn't been measured).
+   - `serde`: byte-for-byte serialized representation equality and
+     round-trip, for representative types, against real `cgmath` 0.18.0
+     -- not just "does `cargo test --features serde` pass."
+   - `mint`: component order, matrix orientation, and round-trip
+     verification (same "does it actually match", not just "does it
+     compile" bar).
+   - `rand`: confirm the public `Distribution` impls and feature
+     isolation (no accidental behavior change when `rand` is off).
+   - `swizzle`: API diff specifically with vs. without the feature
+     enabled (beyond the pairwise test-count check already done).
+7. Human review and explicit publish approval.
