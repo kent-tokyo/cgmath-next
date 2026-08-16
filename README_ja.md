@@ -35,6 +35,17 @@ use cgmath::{Matrix4, Quaternion, Vector3}; // 変更不要
 
 これは`cgmath-next`のコンパイル後ライブラリ名が引き続き`cgmath`であるためです(この点をfixtureベースで検証した内容は[`docs/compatibility.md`](docs/compatibility.md)を参照)。詳細と、renameすら不要なケースについては[`docs/migration.md`](docs/migration.md)を参照してください。
 
+## サンプル
+
+カメラのview-projection行列を作成し、点をclip spaceおよびnormalized
+device coordinatesへ変換する最小限の実行可能なサンプルは、
+[`examples/camera_transform.rs`](examples/camera_transform.rs)を参照して
+ください。レンダラーが頂点ごとに実行するのと同じ処理です。
+
+```
+cargo run --example camera_transform
+```
+
 ## このプロジェクトが維持しているもの
 
 * `cgmath` 0.18.0(crates.io公開版)のpublic API — 機械生成のpath diffで検証済みで、現時点で**差分ゼロ**([`docs/api-inventory.md`](docs/api-inventory.md)参照)

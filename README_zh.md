@@ -35,6 +35,17 @@ use cgmath::{Matrix4, Quaternion, Vector3}; // 无需修改
 
 这是因为 `cgmath-next` 编译后的库名仍然是 `cgmath`(基于 fixture 的验证详见 [`docs/compatibility.md`](docs/compatibility.md))。更多细节,以及甚至无需改名的情况,请参见 [`docs/migration.md`](docs/migration.md)。
 
+## 示例
+
+一个最小可运行示例:构建相机的 view-projection 矩阵,并将一个点变换到
+clip space 和 normalized device coordinates —— 这与渲染器针对每个顶点
+执行的流程相同。详见
+[`examples/camera_transform.rs`](examples/camera_transform.rs)。
+
+```
+cargo run --example camera_transform
+```
+
 ## 本项目保留的内容
 
 * `cgmath` 0.18.0(crates.io 发布版)的 public API — 已通过机器生成的路径差异对比验证,目前**零差异**(详见 [`docs/api-inventory.md`](docs/api-inventory.md))

@@ -41,6 +41,17 @@ verification behind this). See
 [`docs/migration.md`](docs/migration.md) for more detail and for cases
 where a rename isn't even necessary.
 
+## Examples
+
+See [`examples/camera_transform.rs`](examples/camera_transform.rs) for a
+minimal, runnable example: building a camera view-projection matrix and
+pushing a point through it into clip space and normalized device
+coordinates — the same per-vertex pipeline a renderer runs.
+
+```
+cargo run --example camera_transform
+```
+
 ## What this project preserves
 
 * The public API of `cgmath` 0.18.0 as published on crates.io — verified by
