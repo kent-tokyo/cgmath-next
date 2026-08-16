@@ -1,0 +1,14 @@
+[package]
+name = "fixture-swizzle-off"
+version = "0.0.0"
+edition = "2021"
+publish = false
+
+# Compile-fail fixture (docs/release-checklist.md outstanding item 6):
+# proves swizzle methods are genuinely absent from the public API when the
+# `swizzle` feature is off, not merely undocumented. Deliberately does NOT
+# enable the `swizzle` feature -- `cargo build` in this directory is
+# expected to FAIL with E0599 ("no method named `xy` found"). A successful
+# build here would itself be the bug.
+[dependencies]
+cgmath-next = { path = "../../.." }

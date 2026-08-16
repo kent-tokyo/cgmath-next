@@ -82,6 +82,12 @@ as part of the faithful 0.18.0 import (see `docs/provenance.md`).
    confirmed byte-for-byte identical to pristine `cgmath` 0.18.0's
    source. Deliberately doesn't assert an exact RNG output sequence,
    since upstream never guaranteed one for a given seed.
+ - Verified the `swizzle` feature's public API via rustdoc-JSON inventory
+   (550 methods with the feature on, 0 with it off, in both
+   `cgmath-next` and pristine `cgmath` 0.18.0, zero difference either
+   direction) and a new compile-fail fixture,
+   `compat/fixtures/swizzle-off/`, which fails with `E0599` when the
+   feature is off and builds cleanly when it's on.
  - Renamed package to `cgmath-next` (crates.io name only —
    `[lib] name = "cgmath"` is unchanged, so `use cgmath::...` still works).
    Version set to `0.18.1-alpha.1` to signal this is a patch series on top
