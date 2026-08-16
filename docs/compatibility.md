@@ -156,22 +156,35 @@ this test suite can check, not just individual + all-features.
 
 `compat/fixtures/dual-dep/` depends on real `cgmath = "0.18.0"` from
 crates.io and `cgmath-next` (via `path`) simultaneously, under distinct
-local names, and runs the same inputs through both. 9 tests, all exact
-`==` comparisons (not approx): vector add/sub/mul/div,
+local names, and runs the same inputs through both. 9 numeric-differential
+tests, all exact `==` comparisons (not approx): vector add/sub/mul/div,
 dot/cross/magnitude/normalize, matrix add/sub/mul/transpose/determinant/
 invert, quaternion multiplication and vector rotation, Euler-to-matrix/
 quaternion conversion, Deg/Rad conversion, nlerp/slerp interpolation,
 point midpoint, `look_at_rh`, perspective/ortho projection, and
 `Decomposed` transform composition. **9/9 pass, bit-identical output.**
 
-Not covered yet: swizzle operations, serde round-trip byte-for-byte
-comparison between the two crates' JSON output, and `mint` conversion
-round-trips. `tests/soundness/` already independently covers
-`swap_columns`/`swap_elements`/`swap_rows` behavior (not compared against
-upstream here, since upstream's version of those functions is the known-UB
-one -- see `docs/unsafe-audit.md` and the fix commit for why comparing
-against upstream's behavior for those specific functions isn't the right
-test).
+Plus 6 serde wire-format differential tests (both crates built with
+`features = ["serde"]`): `Vector1..4`, `Point1..3`, `Matrix2..4`,
+`Quaternion`, `Euler<Rad<S>>`/`Euler<Deg<S>>`, and `Decomposed`, each
+across `f32` and `f64` where applicable. Each test asserts, not just
+"parses OK" but actual equality: (1) `serde_json::to_string` output is
+byte-for-byte identical between the two crates, (2) each crate's own
+output round-trips back to an equal value, and (3) each crate's JSON
+cross-deserializes correctly into the *other* crate's type. **All pass,
+byte-identical.** This is expected, not incidental: every serde-derived
+type in both crates uses plain public named fields with no `#[serde(...)]`
+attribute overrides, so field name/order/type is what determines the wire
+format, and the zero public-API-diff result (`docs/api-inventory.md`)
+already establishes those match.
+
+Not covered yet: swizzle operations and `mint` conversion round-trips
+(tracked separately, see `docs/release-checklist.md`). `tests/soundness/`
+already independently covers `swap_columns`/`swap_elements`/`swap_rows`
+behavior (not compared against upstream here, since upstream's version of
+those functions is the known-UB one -- see `docs/unsafe-audit.md` and the
+fix commit for why comparing against upstream's behavior for those
+specific functions isn't the right test).
 
 ## Reverse-dependency fixtures (AGENTS.md §14)
 

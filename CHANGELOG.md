@@ -62,6 +62,11 @@ as part of the faithful 0.18.0 import (see `docs/provenance.md`).
    `AsRef`/`AsMut`/`From<&[..]>`/`From<&mut [..]>` for `Vector1..4`,
    `Point1..3`, both `Matrix2..4` array shapes, and `Quaternion`, including
    write-back-through-the-view checks and `-Zmiri-strict-provenance`.
+ - Extended `compat/fixtures/dual-dep/` with 6 `serde` wire-format
+   differential tests against real `cgmath` 0.18.0: byte-for-byte JSON
+   equality, same-crate round-trip, and cross-crate deserialization for
+   `Vector1..4`, `Point1..3`, `Matrix2..4`, `Quaternion`,
+   `Euler<Rad/Deg<S>>`, and `Decomposed`. All pass, byte-identical.
  - Renamed package to `cgmath-next` (crates.io name only —
    `[lib] name = "cgmath"` is unchanged, so `use cgmath::...` still works).
    Version set to `0.18.1-alpha.1` to signal this is a patch series on top

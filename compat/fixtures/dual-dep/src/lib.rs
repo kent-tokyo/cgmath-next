@@ -231,3 +231,149 @@ fn both_crates_coexist_and_agree() {
     assert_eq!(old.y, next.y);
     assert_eq!(old.z, next.z);
 }
+
+// serde wire-format differential (docs/release-checklist.md outstanding
+// item 6): not just "does cargo test --features serde pass" on this crate
+// alone, but byte-for-byte JSON equality against real cgmath 0.18.0's
+// derive-generated Serialize/Deserialize output, plus round-trip in both
+// directions and cross-deserialization (cgmath-next's JSON parses back
+// into 0.18.0's type and vice versa). All `#[derive(Serialize,
+// Deserialize)]` types use plain public named fields with no `#[serde(...)]`
+// attribute overrides in either crate, so this exercises the same derive
+// machinery both sides -- a real difference in field name, order, or type
+// would show up as `byte_eq == false` here, not just a type-checker pass.
+use serde::de::DeserializeOwned;
+use serde::Serialize;
+
+fn assert_serde_matches<A, B>(a: &A, b: &B)
+where
+    A: Serialize + DeserializeOwned + PartialEq + std::fmt::Debug,
+    B: Serialize + DeserializeOwned + PartialEq + std::fmt::Debug,
+{
+    let ja = serde_json::to_string(a).unwrap();
+    let jb = serde_json::to_string(b).unwrap();
+    assert_eq!(ja, jb, "serialized JSON differs between 0.18.0 and cgmath-next");
+
+    let a_roundtrip: A = serde_json::from_str(&ja).unwrap();
+    assert_eq!(&a_roundtrip, a, "0.18.0 round-trip changed the value");
+    let b_roundtrip: B = serde_json::from_str(&jb).unwrap();
+    assert_eq!(&b_roundtrip, b, "cgmath-next round-trip changed the value");
+
+    // cross-deserialization: each crate's JSON must parse into the other's type
+    let cross_a: A = serde_json::from_str(&jb).unwrap();
+    assert_eq!(&cross_a, a, "cgmath-next's JSON didn't deserialize into 0.18.0's type correctly");
+    let cross_b: B = serde_json::from_str(&ja).unwrap();
+    assert_eq!(&cross_b, b, "0.18.0's JSON didn't deserialize into cgmath-next's type correctly");
+}
+
+#[test]
+fn serde_vector_byte_exact_roundtrip() {
+    assert_serde_matches(&cgmath::Vector1::new(1.5f32), &cgmath_next::Vector1::new(1.5f32));
+    assert_serde_matches(&cgmath::Vector1::new(1.5f64), &cgmath_next::Vector1::new(1.5f64));
+    assert_serde_matches(&cgmath::Vector2::new(1.5f32, -2.25), &cgmath_next::Vector2::new(1.5f32, -2.25));
+    assert_serde_matches(&cgmath::Vector2::new(1.5f64, -2.25), &cgmath_next::Vector2::new(1.5f64, -2.25));
+    assert_serde_matches(
+        &cgmath::Vector3::new(1.5f32, -2.25, 3.75),
+        &cgmath_next::Vector3::new(1.5f32, -2.25, 3.75),
+    );
+    assert_serde_matches(
+        &cgmath::Vector3::new(1.5f64, -2.25, 3.75),
+        &cgmath_next::Vector3::new(1.5f64, -2.25, 3.75),
+    );
+    assert_serde_matches(
+        &cgmath::Vector4::new(1.5f32, -2.25, 3.75, -4.125),
+        &cgmath_next::Vector4::new(1.5f32, -2.25, 3.75, -4.125),
+    );
+    assert_serde_matches(
+        &cgmath::Vector4::new(1.5f64, -2.25, 3.75, -4.125),
+        &cgmath_next::Vector4::new(1.5f64, -2.25, 3.75, -4.125),
+    );
+}
+
+#[test]
+fn serde_point_byte_exact_roundtrip() {
+    assert_serde_matches(&cgmath::Point1::new(9.5f32), &cgmath_next::Point1::new(9.5f32));
+    assert_serde_matches(&cgmath::Point1::new(9.5f64), &cgmath_next::Point1::new(9.5f64));
+    assert_serde_matches(&cgmath::Point2::new(9.5f32, -1.25), &cgmath_next::Point2::new(9.5f32, -1.25));
+    assert_serde_matches(&cgmath::Point2::new(9.5f64, -1.25), &cgmath_next::Point2::new(9.5f64, -1.25));
+    assert_serde_matches(
+        &cgmath::Point3::new(9.5f32, -1.25, 0.75),
+        &cgmath_next::Point3::new(9.5f32, -1.25, 0.75),
+    );
+    assert_serde_matches(
+        &cgmath::Point3::new(9.5f64, -1.25, 0.75),
+        &cgmath_next::Point3::new(9.5f64, -1.25, 0.75),
+    );
+}
+
+#[test]
+fn serde_matrix_byte_exact_roundtrip() {
+    assert_serde_matches(
+        &cgmath::Matrix2::new(1.0f32, 2.0, 3.0, 4.0),
+        &cgmath_next::Matrix2::new(1.0f32, 2.0, 3.0, 4.0),
+    );
+    assert_serde_matches(
+        &cgmath::Matrix2::new(1.0f64, 2.0, 3.0, 4.0),
+        &cgmath_next::Matrix2::new(1.0f64, 2.0, 3.0, 4.0),
+    );
+    #[rustfmt::skip]
+    assert_serde_matches(
+        &cgmath::Matrix3::new(1.0f32, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0),
+        &cgmath_next::Matrix3::new(1.0f32, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0),
+    );
+    #[rustfmt::skip]
+    let (m_o, m_n) = (
+        cgmath::Matrix4::new(
+            1.0f32, 2.0, 3.0, 4.0,
+            5.0, 6.0, 7.0, 8.0,
+            9.0, 10.0, 11.0, 12.0,
+            13.0, 14.0, 15.0, 16.0,
+        ),
+        cgmath_next::Matrix4::new(
+            1.0f32, 2.0, 3.0, 4.0,
+            5.0, 6.0, 7.0, 8.0,
+            9.0, 10.0, 11.0, 12.0,
+            13.0, 14.0, 15.0, 16.0,
+        ),
+    );
+    assert_serde_matches(&m_o, &m_n);
+}
+
+#[test]
+fn serde_quaternion_byte_exact_roundtrip() {
+    assert_serde_matches(
+        &cgmath::Quaternion::new(1.0f32, 2.0, 3.0, 4.0),
+        &cgmath_next::Quaternion::new(1.0f32, 2.0, 3.0, 4.0),
+    );
+    assert_serde_matches(
+        &cgmath::Quaternion::new(1.0f64, 2.0, 3.0, 4.0),
+        &cgmath_next::Quaternion::new(1.0f64, 2.0, 3.0, 4.0),
+    );
+}
+
+#[test]
+fn serde_euler_byte_exact_roundtrip() {
+    assert_serde_matches(
+        &cgmath::Euler::new(cgmath::Rad(0.1f32), cgmath::Rad(0.2), cgmath::Rad(0.3)),
+        &cgmath_next::Euler::new(cgmath_next::Rad(0.1f32), cgmath_next::Rad(0.2), cgmath_next::Rad(0.3)),
+    );
+    assert_serde_matches(
+        &cgmath::Euler::new(cgmath::Deg(10.0f64), cgmath::Deg(20.0), cgmath::Deg(30.0)),
+        &cgmath_next::Euler::new(cgmath_next::Deg(10.0f64), cgmath_next::Deg(20.0), cgmath_next::Deg(30.0)),
+    );
+}
+
+#[test]
+fn serde_decomposed_transform_byte_exact_roundtrip() {
+    let d_o = cgmath::Decomposed {
+        scale: 2.0f64,
+        rot: cgmath::Quaternion::new(1.0, 0.0, 0.0, 0.0),
+        disp: v3_old(1.0, 2.0, 3.0),
+    };
+    let d_n = cgmath_next::Decomposed {
+        scale: 2.0f64,
+        rot: cgmath_next::Quaternion::new(1.0, 0.0, 0.0, 0.0),
+        disp: v3_next(1.0, 2.0, 3.0),
+    };
+    assert_serde_matches(&d_o, &d_n);
+}
