@@ -14,3 +14,4 @@
 /_upstream-master/
 compat/fixtures/**/target/
 compat/fixtures/**/Cargo.lock
+AGENTS.md
