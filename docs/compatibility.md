@@ -262,8 +262,12 @@ documented or guaranteed for a given seed. Verified instead:
   6 tests): confirms the existing contract these impls have always had --
   every generated component is finite, and within its documented or
   source-derivable range: `[0, 1)` for `Vector`/`Matrix`/`Quaternion`
-  components (rand's own `Standard: Distribution<f32/f64>` contract, which
-  these impls compose via `rng.gen()`), `[-π, π)` for `Rad` and
+  components -- confirmed against rand 0.8.7's own source, not just
+  inferred: `distributions::Standard`'s docs state "samples from `[0, 1)`"
+  and its `Distribution<f32>`/`Distribution<f64>` impl macro carries the
+  comment `// Multiply-based method; 24/53 random bits; [0, 1) interval.`
+  (`rand-0.8.7/src/distributions/float.rs`), which these impls compose via
+  `rng.gen()` -- `[-π, π)` for `Rad` and
   `[-180, 180)` for `Deg`/`Euler` (the literal bounds `impl_angle!` passes
   to `rng.gen_range`). Plus a non-degeneracy sanity check (not a
   statistical RNG-quality test, which would be flaky by nature -- just

@@ -110,8 +110,10 @@ approval (§21) -- this document does not constitute that approval.
      tests, gated `#![cfg(feature = "rand")]`) confirms the existing
      contract these impls have always had: generated components are
      finite and within their documented/derivable range (`[0,1)` for
-     vector/matrix/quaternion components per rand's own `Standard`
-     float contract, `[-pi,pi)`/`[-180,180)` for `Rad`/`Deg` per the
+     vector/matrix/quaternion components, confirmed against rand 0.8.7's
+     own source -- `distributions::Standard`'s docs and its
+     `Distribution<f32/f64>` impl comment both state `[0, 1)` --
+     `[-pi,pi)`/`[-180,180)` for `Rad`/`Deg` per the
      macro's own `gen_range` bounds), plus a non-degeneracy sanity
      check. Deliberately does NOT assert an exact RNG output sequence,
      since upstream never guaranteed one. Feature-off leak confirmed via
