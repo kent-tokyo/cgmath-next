@@ -57,10 +57,7 @@ fn matrix2_distinct_indices_still_swap() {
 fn matrix3_distinct_indices_still_swap() {
     let mut m = Matrix3::new(1.0f64, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0);
     m.swap_columns(0, 2);
-    assert_eq!(
-        m,
-        Matrix3::new(7.0, 8.0, 9.0, 4.0, 5.0, 6.0, 1.0, 2.0, 3.0)
-    );
+    assert_eq!(m, Matrix3::new(7.0, 8.0, 9.0, 4.0, 5.0, 6.0, 1.0, 2.0, 3.0));
 }
 
 #[test]

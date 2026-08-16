@@ -94,10 +94,7 @@ fn matrix4_swap_elements_same_cell_is_noop() {
 fn matrix3_swap_elements_distinct_cells_still_swap() {
     let mut m = Matrix3::new(1.0f64, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0);
     m.swap_elements((0, 0), (2, 2));
-    assert_eq!(
-        m,
-        Matrix3::new(9.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 1.0)
-    );
+    assert_eq!(m, Matrix3::new(9.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 1.0));
 }
 
 #[test]
