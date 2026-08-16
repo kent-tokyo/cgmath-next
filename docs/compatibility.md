@@ -140,13 +140,17 @@ anything is equivalent to the single-feature row), run as
 | `mint,swizzle` | pass, 302 tests, 0 failed |
 | `rand,swizzle` | pass, 302 tests, 0 failed |
 
-Every count is exactly the sum of that pair's individual-row bonuses
-(serde +1 doctest, swizzle +2 tests, mint/rand +0) — additive, no
-pairwise-specific gain or loss, confirming the single-feature rows above
-and `--all-features` already cover the interaction space; no `cfg` logic
-in `src/lib.rs` makes any pair behave differently than the sum of its
-parts. §12's "individual and combination" requirement is now fully met,
-not just individual + all-features.
+No `cfg` logic in `src/lib.rs` makes any feature reference or gate on
+another (confirmed by reading the file, same check as the feature
+inventory section above) — that's the actual reason no pairwise-specific
+interaction is possible here, not the test run itself. The run's additive
+counts (every pair's total is exactly the sum of that pair's individual-row
+bonuses: serde +1 doctest, swizzle +2 tests, mint/rand +0) are consistent
+with that and rule out a pair silently *skipping* a test some other row
+runs, but a passing count can't prove the *absence* of a behavioral
+interaction on its own — only that nothing gated in or out. §12's
+"individual and combination" requirement is now fully met at the level
+this test suite can check, not just individual + all-features.
 
 ## Differential testing vs. upstream (AGENTS.md §11.2)
 

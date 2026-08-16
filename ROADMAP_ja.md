@@ -4,9 +4,12 @@
 
 ## 現在の状況 (2026-08-16)
 
-`0.18.1-alpha.1`実装フェーズ。下記「0.18.1 — Safe Successor」の完了条件5件は
-すべて満たされている（詳細は`docs/release-checklist.md`参照、alpha側12条件も
-全件met）。
+`0.18.1-alpha.1`実装フェーズ。下記「0.18.1 — Safe Successor」に明記された
+完了条件5件、およびAGENTS.md §20のalpha gate（12条件）はすべて満たされている
+（詳細は`docs/release-checklist.md`参照）。**ただしこれは「0.18.1が完成した」
+という意味ではない** -- 同じ`docs/release-checklist.md`のstable gateでは
+`UNSAFE-002`が未解決のため12条件中1件が引き続きnot met であり、
+`0.18.1-alpha.1`は名前の通りalpha候補の段階に留まる。
 
 * 既知の`swap_columns` UBを再現でき、修正後はMiriで成功する -- met
   (`tests/soundness/`、`cargo +nightly miri test --test soundness`で22/22)
