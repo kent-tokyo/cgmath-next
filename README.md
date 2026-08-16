@@ -100,8 +100,8 @@ where a rename isn't even necessary.
 upstream's `master` branch (which has diverged with unreleased features and
 a dependency bump). See [`docs/provenance.md`](docs/provenance.md) for the
 exact source, checksum, and the classification of every upstream commit
-since the 0.18.0 tag. `cgmath-next` is not published to crates.io yet — see
-[Release status](#release-status).
+since the 0.18.0 tag. See [Release status](#release-status) for what's
+published so far.
 
 ## Compatibility policy
 
@@ -146,15 +146,6 @@ v.xyxz(); // Vector4 { x: 1.0, y: 2.0, z: 1.0, w: 3.0 }
 v.zy();   // Vector2 { x: 3.0, y: 2.0 }
 ```
 
-### SIMD (not usable)
-
-Inherited from upstream: `quaternion_simd.rs`/`vector_simd.rs` depend on a
-`simd` feature that isn't declared in `Cargo.toml` and a `simd` crate that
-isn't a dependency, so this code cannot currently be reached by any normal
-build. See `docs/unsafe-audit.md` (`UNSAFE-004`) for detail. Not fixed or
-removed yet — flagged as a candidate for a future decision (delete vs.
-rewrite against a maintained SIMD crate).
-
 ## Conventions
 
 `cgmath-next` interprets its vectors as column matrices ("column
@@ -179,11 +170,14 @@ undefined behavior) are treated as security issues, not ordinary bugs.
 
 ## Release status
 
-**Not yet published to crates.io.** Current state is an unpublished
-0.18.1-alpha.1 candidate (source available on GitHub, no crates.io release,
-tag, or GitHub Release exists). See
-[`docs/release-checklist.md`](docs/release-checklist.md) for what's
-outstanding before an alpha or stable release.
+**`0.18.1-alpha.1` is published** to crates.io, tagged
+([`v0.18.1-alpha.1`](https://github.com/kent-tokyo/cgmath-next/releases/tag/v0.18.1-alpha.1)),
+and marked as a GitHub pre-release. This is an **alpha**, not a stability
+guarantee — see
+[`docs/release-checklist.md`](docs/release-checklist.md) for the exact
+gating conditions met and not yet met, and `docs/unsafe-audit.md`'s
+`UNSAFE-002` section for the one known gap before a `0.18.1` stable
+release. No stable release has been published.
 
 ## Contributing
 
