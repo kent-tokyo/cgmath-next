@@ -105,12 +105,14 @@ jobs:
         run: cargo miri test --test soundness
       # --skip test_slerp: Miri has documented non-deterministic float
       # evaluation for transcendental/trig operations (see docs/baseline.md's
-      # addendum). slerp's assert_ulps_eq! checks trip on this by ~1e-16,
-      # independent of source changes -- confirmed by running the identical
-      # command against a commit before and after an unrelated change and
-      # seeing the same non-deterministic pass/fail pattern either way. Not
-      # a soundness signal; unrelated to any unsafe/conversion path this
-      # step exists to cover. The tests themselves are untouched and still
-      # run under plain `cargo test` and manual `cargo miri test --lib`.
+      # addendum). slerp's assert_ulps_eq! checks trip on this by ~1e-16.
+      # Locally re-running `cargo miri test --lib` repeatedly against both
+      # the commit before the layout guard and the guard commit itself
+      # produced different slerp sub-test failures each time on both --
+      # i.e. the flake predates the guard change and isn't caused by it,
+      # even though it wasn't caught by CI until this run. Not a soundness
+      # signal; unrelated to any unsafe/conversion path this step exists
+      # to cover. The tests themselves are untouched and still run under
+      # plain `cargo test` and manual `cargo miri test --lib`.
       - name: representative matrix/vector conversion + unsafe-audited paths
         run: cargo miri test --lib -- --skip test_slerp

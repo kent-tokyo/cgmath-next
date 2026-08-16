@@ -538,12 +538,11 @@ mod tuple_layout_guard_tests {
 
     #[test]
     fn rejects_a_size_mismatch() {
-        // A tuple with a padding-inducing trailing unit field has a
-        // different size than Vector4's 4 fields, and (unlike the
-        // scrambled-mapping case above) doesn't even type-check against
-        // `impl_tuple_conversions!`'s real call sites -- this exercises
-        // `tuple_layout_matches!`'s size_of guard directly by comparing
-        // against a same-arity but differently-sized field type.
+        // (f64, f64, f64, f64) is twice the size of Vector4<f32> and
+        // doesn't even type-check against `impl_tuple_conversions!`'s
+        // real call sites -- this exercises `tuple_layout_matches!`'s
+        // size_of guard directly by comparing against a same-arity but
+        // differently-sized field type.
         assert!(!tuple_layout_matches!(
             Vector4<f32> { x: 0, y: 1, z: 2, w: 3 },
             (f64, f64, f64, f64)
