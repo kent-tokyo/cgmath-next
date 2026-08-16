@@ -99,3 +99,36 @@ fn swap_columns_applied_twice_returns_to_original() {
     m.swap_columns(2, 2);
     assert_eq!(m, before, "swap_columns(a, a) twice must be identity");
 }
+
+// AGENTS.md requires that fixing the same-index UB not change out-of-range
+// panic behavior. swap_columns still indexes through the same bounds-checked
+// Index/IndexMut impls as before the fix (self[a]/self[b]), so it should
+// still panic on out-of-range indices exactly as it did pre-fix.
+#[test]
+#[should_panic(expected = "index out of bounds")]
+fn matrix2_swap_columns_out_of_range_first_index_panics() {
+    let mut m = Matrix2::new(1.0f64, 2.0, 3.0, 4.0);
+    m.swap_columns(2, 0);
+}
+
+#[test]
+#[should_panic(expected = "index out of bounds")]
+fn matrix2_swap_columns_out_of_range_second_index_panics() {
+    let mut m = Matrix2::new(1.0f64, 2.0, 3.0, 4.0);
+    m.swap_columns(0, 2);
+}
+
+#[test]
+fn matrix2_swap_columns_out_of_range_does_not_mutate_before_panicking() {
+    // `let tmp = self[a];` (the read) happens before any write, so a
+    // panic on an out-of-range `a` must leave the matrix completely
+    // unmodified. This is a property of evaluation order in the fix,
+    // not something obviously guaranteed -- pin it down explicitly.
+    let before = Matrix2::new(1.0f64, 2.0, 3.0, 4.0);
+    let mut m = before;
+    let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        m.swap_columns(9, 0);
+    }));
+    assert!(result.is_err());
+    assert_eq!(m, before);
+}

@@ -108,3 +108,30 @@ fn matrix2_swap_rows_same_index_is_noop() {
         assert_eq!(m, before);
     }
 }
+
+// Same out-of-range panic behavior guarantee as swap_columns.rs -- the fix
+// must not turn a bounds-check panic into silent UB or a wrong value.
+#[test]
+#[should_panic(expected = "index out of bounds")]
+fn vector3_swap_elements_out_of_range_panics() {
+    let mut v = Vector3::new(1.0f64, 2.0, 3.0);
+    v.swap_elements(0, 5);
+}
+
+#[test]
+#[should_panic(expected = "index out of bounds")]
+fn matrix3_swap_elements_out_of_range_column_panics() {
+    let mut m = Matrix3::new(1.0f64, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0);
+    m.swap_elements((5, 0), (0, 0));
+}
+
+#[test]
+fn vector3_swap_elements_out_of_range_does_not_mutate_before_panicking() {
+    let before = Vector3::new(1.0f64, 2.0, 3.0);
+    let mut v = before;
+    let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        v.swap_elements(9, 0);
+    }));
+    assert!(result.is_err());
+    assert_eq!(v, before);
+}
