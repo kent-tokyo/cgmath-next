@@ -43,8 +43,14 @@ where a rename isn't even necessary.
 * The public API of `cgmath` 0.18.0 as published on crates.io — verified by
   a machine-generated path diff, currently **zero differences**
   (see [`docs/api-inventory.md`](docs/api-inventory.md))
-* Numeric results, types, trait implementations, and `serde`
-  representations, except where a soundness fix required a change
+* Numeric results, except where a soundness fix required a change —
+  verified by a 9-case differential test suite against real `cgmath`
+  0.18.0 with exact (not approximate) equality
+  (see [`docs/compatibility.md`](docs/compatibility.md))
+* Types and trait implementations, including the `serde`/`mint`/`rand`
+  derive impls — unchanged code, but their wire-format output isn't
+  independently round-trip-tested against upstream yet (also noted in
+  `docs/compatibility.md`)
 * The `[lib] name = "cgmath"` the original crate already declared, so
   existing `use cgmath::...` code keeps compiling
 * Apache-2.0 licensing and the original copyright notices

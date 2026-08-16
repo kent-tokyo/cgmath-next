@@ -15,7 +15,7 @@ this project's automation does on its own.
 |---|---|---|
 | 1 | 公開版0.18.0のprovenanceが記録されている | done -- `docs/provenance.md` |
 | 2 | Apache-2.0 attributionが保持されている | done -- `LICENSE`, per-file copyright headers unmodified |
-| 3 | upstreamテストが通る | done -- 256/256 original tests pass unmodified, `docs/baseline.md` |
+| 3 | upstreamテストが通る | done -- 256/256 original tests pass unmodified, `docs/baseline.md`; benchmark baseline (§16) also now recorded there, 59/59 pass |
 | 4 | swap_columnsの既知UBが修正されている | done, and broader than the ticket -- see the fix commit, `docs/unsafe-audit.md` |
 | 5 | Miri regression testが通る | done -- `tests/soundness/`, 22/22 pass under `cargo +nightly miri test --test soundness` |
 | 6 | public API差分が生成されている | done -- `docs/api-inventory.md`, zero-diff result |
@@ -41,8 +41,8 @@ approval (§21) -- this document does not constitute that approval.
 | 5 | serde、mint、rand、swizzleの互換性が検証されている | partially -- individual-feature `cargo test` passes for all 4 (`docs/compatibility.md`); no dedicated round-trip/format-stability test beyond what upstream's own tests already cover |
 | 6 | migration fixtureが5件以上通る | **not met** -- 3/5 (`arcball`, `crevice`, `truck-base`) |
 | 7 | MSRVが実測・文書化されている | met -- `docs/msrv.md`, though it documents that the number is driven by transitive deps and will drift |
-| 8 | 3 platformでCIが通る | **not met** -- no CI configured yet (see below) |
-| 9 | `cargo audit`と`cargo deny`の結果が説明されている | **not met** -- neither has been run this session |
+| 8 | 3 platformでCIが通る | met on paper -- `.github/workflows/ci.yml` configures the 3-platform x {MSRV, stable, beta-nonblocking} matrix; **not yet verified by an actual GitHub Actions run** (never pushed to `origin`, see Parked items) |
+| 9 | `cargo audit`と`cargo deny`の結果が説明されている | met -- `deny.toml` added, `cargo deny --all-features check` run clean (advisories/bans/licenses/sources all ok); `security` CI job wires this in going forward |
 | 10 | 既知のcompatibility gapが公開されている | met -- `docs/compatibility.md`, `docs/unsafe-audit.md` both list open gaps |
 | 11 | release checklistが完了している | this document; not all rows above are checked yet |
 | 12 | publish前に人間の明示承認を得ている | pending -- not requested yet |
@@ -57,8 +57,9 @@ approval (§21) -- this document does not constitute that approval.
    used: `three-d` (popular rendering engine, larger build), `vector-
    traits` (trait abstraction crate, likely light), `boostvoronoi_core`
    (geometry/CAD), `smithay` (Wayland compositor, heavier build).
-3. `cargo audit` and `cargo deny check` (needs `deny.toml`, see below).
-4. CI: 3-platform x {declared MSRV, current stable, beta/nightly
-   non-blocking} matrix, per AGENTS.md §15.
+3. ~~`cargo audit` and `cargo deny check`~~ -- done, see row 9 above.
+4. ~~CI: 3-platform matrix~~ -- configured in `.github/workflows/ci.yml`;
+   still needs a real run against `origin` to count as *verified*, not
+   just configured (blocked on the parked push decision).
 5. Pairwise feature combination testing beyond `--all-features`.
 6. Human review and explicit publish approval.

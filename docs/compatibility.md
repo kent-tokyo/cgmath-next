@@ -111,18 +111,18 @@ baseline and the existing `cargo test --all-features` from `docs/baseline.md`.
 | Row | Command | Result |
 |---|---|---|
 | no features | `cargo test --no-default-features` | pass, 300 tests, 0 failed |
-| `serde` alone | `cargo test --no-default-features --features serde` | pass, 300 tests, 0 failed |
+| `serde` alone | `cargo test --no-default-features --features serde` | pass, 301 tests, 0 failed (+1: a serde-gated doctest) |
 | `mint` alone | `cargo test --no-default-features --features mint` | pass, 300 tests, 0 failed |
 | `rand` alone | `cargo test --no-default-features --features rand` | pass, 300 tests, 0 failed |
-| `swizzle` alone | `cargo test --no-default-features --features swizzle` | pass, 300 tests, 0 failed |
+| `swizzle` alone | `cargo test --no-default-features --features swizzle` | pass, 302 tests, 0 failed (+2: `tests/swizzle.rs` unlocked) |
 | `unstable` alone | `cargo test --no-default-features --features unstable` | pass, 300 tests, 0 failed (confirms `unstable` gates no reachable code either way, see the feature inventory above) |
-| all features | `cargo test --all-features` | pass, 300 tests, 0 failed (from `docs/baseline.md`, re-confirmed after the fix) |
+| all features | `cargo test --all-features` | pass, 303 tests, 0 failed (300 base + 1 serde doctest + 2 swizzle tests, additive; `docs/baseline.md`'s "281" is the same command run in Phase 1, before `tests/soundness/`'s 22 tests existed — 281 + 22 = 303, consistent, not a discrepancy) |
 
-All 7 rows produce the identical 300/0/13-binary shape (256 upstream +
-22 soundness + 22 doctest = 300; test *counts per binary* vary slightly
-between rows only where a feature gates extra doctests/tests, e.g.
-`swizzle` unlocks `tests/swizzle.rs`'s 2 tests instead of 0). No feature
-combination fails, and none was skipped.
+The base count is 300 (256 upstream + 22 soundness + 22 doctest); two rows
+add to that where a feature unlocks extra gated tests/doctests, per above.
+Raw logs backing these counts: `/tmp/feature-matrix/*.log` (not committed,
+machine-local scratch output — reproduce with the commands in the table).
+No feature combination fails, and none was skipped.
 
 **Not yet done**: paired/combined feature builds beyond
 `--all-features` (e.g. `serde` + `mint` but not `rand`) — §12 asks for

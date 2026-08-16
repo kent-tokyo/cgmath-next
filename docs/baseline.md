@@ -107,3 +107,22 @@ change numeric behavior:
    rather than "fixed" per AGENTS.md's rule against loosening tolerances
    to hide numeric differences: this isn't a numeric difference this fork
    introduced, so there is nothing here to fix.
+
+## Addendum: benchmark baseline (AGENTS.md §16)
+
+`cargo +nightly bench --features rand,serde,mint` on the fixed source, run
+once as a baseline measurement (not a regression gate — no pre-fix bench
+run exists to compare against, since the fix commit doesn't touch any
+benchmarked path: `benches/` covers matrix/vector/quaternion arithmetic,
+not `swap_columns`/`swap_elements`). 59 benchmarks total, 0 failed:
+
+* `benches/matrix.rs` — 25 measured, 0.76 ns (`matrix2_transpose`) to
+  13.20 ns (`matrix4_invert`).
+* `benches/quaternion.rs` — 9 measured, 0.70-1.50 ns.
+* `benches/vector.rs` — 25 measured, 0.74 ns (`vector3_magnitude`) to
+  14.71 ns (`vector4_rem_s`).
+
+Full output not committed (raw `libtest bench` numbers are noisy machine-
+and load-dependent measurements, not something to freeze into version
+control); reproduce with the command above. Recorded here to satisfy §16's
+"a baseline measurement exists" bar, not as a performance claim.
