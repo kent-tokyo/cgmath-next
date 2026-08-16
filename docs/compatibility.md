@@ -156,7 +156,9 @@ this test suite can check, not just individual + all-features.
 
 `compat/fixtures/dual-dep/` depends on real `cgmath = "0.18.0"` from
 crates.io and `cgmath-next` (via `path`) simultaneously, under distinct
-local names, and runs the same inputs through both. 9 numeric-differential
+local names, and runs the same inputs through both. Runs as a blocking
+step in the `compat` CI job on every push/PR, not just at write time.
+9 numeric-differential
 tests, all exact `==` comparisons (not approx): vector add/sub/mul/div,
 dot/cross/magnitude/normalize, matrix add/sub/mul/transpose/determinant/
 invert, quaternion multiplication and vector rotation, Euler-to-matrix/
@@ -240,7 +242,9 @@ fixture builds cleanly with `cargo build --features cgmath-next/swizzle`,
 confirming the failure is specifically about the feature being off, not
 some unrelated typo or path issue. This directly proves (not just infers
 from the rustdoc-JSON absence above) that the swizzle API doesn't leak
-into a build that never requested it.
+into a build that never requested it. Both the negative and positive
+control run as blocking steps in the `compat` CI job on every push/PR --
+a regression here fails CI, not just a manually re-run check.
 
 ## `rand` feature verification
 

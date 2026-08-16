@@ -92,6 +92,15 @@ as part of the faithful 0.18.0 import (see `docs/provenance.md`).
    `[lib] name = "cgmath"` is unchanged, so `use cgmath::...` still works).
    Version set to `0.18.1-alpha.1` to signal this is a patch series on top
    of the `cgmath` 0.18 API, not a new major version.
+ - Pre-publish metadata fix: `homepage` pointed at the original
+   `rustgd/cgmath` repository, which would have been misleading for this
+   fork's own crates.io listing — now points at `cgmath-next`'s own repo.
+   `authors` now credits both the original project and this fork.
+ - `compat/fixtures/dual-dep` (serde/mint differential tests) and
+   `compat/fixtures/swizzle-off` (feature-gate compile-fail fixture) now
+   run as a blocking `compat` CI job on every push/PR, promoting that
+   compatibility evidence from point-in-time verification to continuous
+   regression protection.
 
 ### Known compatibility gaps
 

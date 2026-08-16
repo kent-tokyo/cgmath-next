@@ -91,6 +91,49 @@ jobs:
         with:
           arguments: --all-features
 
+  compat:
+    name: compatibility fixtures (serde/mint differential, swizzle gate)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      # compat/fixtures/dual-dep: pulls real upstream cgmath 0.18.0
+      # alongside this crate under different local names and asserts
+      # byte-exact serde JSON + verified mint conversions between them.
+      # See docs/compatibility.md's differential-testing section.
+      - name: serde/mint differential tests vs upstream cgmath 0.18.0
+        working-directory: compat/fixtures/dual-dep
+        run: cargo test
+      # compat/fixtures/swizzle-off: deliberately does not enable the
+      # swizzle feature and calls a swizzle method. Must fail -- a
+      # successful build here would mean a swizzle method leaked into
+      # the public API without the feature. Checks the exit code AND
+      # the specific error (E0599 on `xy`), not just "something failed",
+      # so an unrelated build breakage can't be mistaken for a pass.
+      # See compat/fixtures/swizzle-off/README.md.
+      - name: swizzle-off negative control (must fail without the feature)
+        working-directory: compat/fixtures/swizzle-off
+        run: |
+          set +e
+          OUTPUT=$(cargo build 2>&1)
+          STATUS=$?
+          echo "$OUTPUT"
+          if [ "$STATUS" -eq 0 ]; then
+            echo "::error::expected cargo build to fail without the swizzle feature, but it succeeded"
+            exit 1
+          fi
+          if ! echo "$OUTPUT" | grep -q "E0599"; then
+            echo "::error::expected E0599 in build output, not found"
+            exit 1
+          fi
+          if ! echo "$OUTPUT" | grep -q "xy"; then
+            echo "::error::expected method name 'xy' in build output, not found"
+            exit 1
+          fi
+      - name: swizzle-off positive control (must succeed with the feature on)
+        working-directory: compat/fixtures/swizzle-off
+        run: cargo build --features cgmath-next/swizzle
+
   miri:
     name: miri (targeted suite)
     runs-on: ubuntu-latest

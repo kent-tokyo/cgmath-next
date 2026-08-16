@@ -2,13 +2,13 @@
 
 name = "cgmath-next"
 version = "0.18.1-alpha.1"
-authors = ["Rust game-developers"]
+authors = ["Rust game-developers", "kent-tokyo"]
 rust-version = "1.71"
 license = "Apache-2.0"
 description = "A maintained, soundness-focused, source-compatible successor to cgmath 0.18."
 
 documentation = "https://docs.rs/cgmath-next"
-homepage = "https://github.com/rustgd/cgmath"
+homepage = "https://github.com/kent-tokyo/cgmath-next"
 repository = "https://github.com/kent-tokyo/cgmath-next"
 readme = "README.md"
 
