@@ -131,3 +131,32 @@ all-features row have been run. `--all-features` is a reasonable proxy for
 most pairwise interactions since these features don't have exclusionary
 `cfg` logic against each other (confirmed by reading `src/lib.rs`'s
 feature gates), but a true pairwise matrix hasn't been machine-verified.
+
+## Differential testing vs. upstream (AGENTS.md §11.2)
+
+`compat/fixtures/dual-dep/` depends on real `cgmath = "0.18.0"` from
+crates.io and `cgmath-next` (via `path`) simultaneously, under distinct
+local names, and runs the same inputs through both. 9 tests, all exact
+`==` comparisons (not approx): vector add/sub/mul/div,
+dot/cross/magnitude/normalize, matrix add/sub/mul/transpose/determinant/
+invert, quaternion multiplication and vector rotation, Euler-to-matrix/
+quaternion conversion, Deg/Rad conversion, nlerp/slerp interpolation,
+point midpoint, `look_at_rh`, perspective/ortho projection, and
+`Decomposed` transform composition. **9/9 pass, bit-identical output.**
+
+Not covered yet: swizzle operations, serde round-trip byte-for-byte
+comparison between the two crates' JSON output, and `mint` conversion
+round-trips. `tests/soundness/` already independently covers
+`swap_columns`/`swap_elements`/`swap_rows` behavior (not compared against
+upstream here, since upstream's version of those functions is the known-UB
+one -- see `docs/unsafe-audit.md` and the fix commit for why comparing
+against upstream's behavior for those specific functions isn't the right
+test).
+
+## Reverse-dependency fixtures (AGENTS.md §14)
+
+See `compat/fixtures/` for real crates.io reverse-dependencies verified
+against `cgmath-next` via the dependency-rename mechanism, if present at
+the time of reading. As of this document's last update: see
+`docs/release-checklist.md` for current count and status against the
+alpha (3+) / stable (5+) gates.
