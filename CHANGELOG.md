@@ -4,7 +4,58 @@ All notable changes to this project will be documented in this file, following
 the format defined at [keepachangelog.com](http://keepachangelog.com/).
 This project adheres to [Semantic Versioning](http://semver.org/).
 
-## [Unreleased]
+Entries below `[v0.18.0]` are `cgmath`'s own changelog, imported verbatim
+as part of the faithful 0.18.0 import (see `docs/provenance.md`).
+`cgmath-next`-specific entries start at the top.
+
+## [Unreleased] (cgmath-next)
+
+### Fixed
+
+ - **Soundness**: `Matrix{2,3,4}::swap_columns` and `Matrix{2,3,4}::swap_elements`
+   could reach undefined behavior from 100% safe Rust
+   ([RUSTSEC-2026-0197](https://rustsec.org/advisories/RUSTSEC-2026-0197.html),
+   [rustgd/cgmath#565](https://github.com/rustgd/cgmath/issues/565)). Fixed
+   by replacing the `unsafe { ptr::swap(...) }` pattern with a safe
+   read-into-temporary-then-write sequence.
+   **This fix's scope is broader than the advisory's literal wording**: the
+   advisory names only same-index `swap_columns` calls; this project found
+   and fixed the same bug (a) for `swap_columns` with *any* two indices,
+   not just equal ones, since two sequential `IndexMut` reborrows of the
+   same matrix are unsound regardless, and (b) in two more call sites the
+   advisory doesn't mention, `Array::swap_elements` (shared by
+   `Vector2/3/4`, `Point2/3/4`, and `Matrix::swap_rows`) and `Matrix`'s
+   own `(col, row)` `swap_elements`. See `docs/unsafe-audit.md` and the
+   commit history for detail. `rustgd/cgmath#565` is still open upstream
+   with `patched = []` in the advisory as of this writing.
+
+### Changed
+
+ - Renamed package to `cgmath-next` (crates.io name only —
+   `[lib] name = "cgmath"` is unchanged, so `use cgmath::...` still works).
+   Version set to `0.18.1-alpha.1` to signal this is a patch series on top
+   of the `cgmath` 0.18 API, not a new major version.
+
+### Known compatibility gaps
+
+ - See `docs/api-inventory.md` for the machine-verified public API diff
+   (currently empty) and `docs/compatibility.md` for what has and hasn't
+   been verified (feature matrix, differential tests, reverse-dependency
+   fixtures).
+
+### MSRV
+
+ - See `docs/msrv.md`.
+
+### Tested feature combinations
+
+ - See `docs/compatibility.md`.
+
+### Tested reverse-dependency fixtures
+
+ - See `docs/compatibility.md` / `compat/fixtures/`.
+
+## [v0.18.0] - 2021-01-03
 
 ### Changed
 
