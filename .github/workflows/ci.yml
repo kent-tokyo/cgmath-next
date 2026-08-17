@@ -18,6 +18,13 @@ env:
   # need re-measuring (not just bumping) if this ever fails here.
   MSRV: "1.71"
 
+# Least-privilege default for every job in this workflow. If a specific
+# job genuinely needs more (verified by it actually failing under this,
+# not guessed in advance), grant that job its own narrower addition here
+# rather than widening this block.
+permissions:
+  contents: read
+
 jobs:
   # AGENTS.md section 15, "通常CI". check/test/doc are blocking; fmt and
   # clippy are informational only for now (baseline has pre-existing
