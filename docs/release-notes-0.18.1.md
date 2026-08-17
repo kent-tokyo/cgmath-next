@@ -1,9 +1,4 @@
-# cgmath-next 0.18.1 release notes (draft)
-
-Prepared during final stable-track preparation, not yet used to create a
-GitHub Release -- `docs/release-checklist.md` governs when that's
-authorized. Intended for the eventual `gh release create` `--notes-file`
-once publish is explicitly approved.
+# cgmath-next 0.18.1 release notes
 
 ## Positioning
 
