@@ -248,39 +248,80 @@ expected before the stable-publish work below is explicitly requested.
 
 ### Timeline
 
-Not a fixed one-week ritual: `alpha.1` was never publicized, so a longer
-wait doesn't mechanically increase the odds of external reports arriving.
-Target: **around 2026-08-20**, contingent on no major issue surfacing
-against `alpha.1` in the meantime, **and** the user's own explicit
-instruction to proceed with the stable-publish work below -- reaching
-the date alone does not authorize it. Upstream/RustSec reply status is
-explicitly **not** part of this gate (see the project memory recorded
-2026-08-16 correcting an earlier, overly cautious version of this same
-plan).
+**Observation window cut short by explicit user decision, 2026-08-17**
+(one day in), superseding the ~2026-08-20 target below. Rationale: since
+`alpha.1` was never publicized, the extra days weren't expected to
+mechanically increase external reports; two security-hardening items
+(see below) were judged worth fixing before stable regardless, and once
+scheduled the user chose to proceed straight to final preparation rather
+than wait out the rest of the window. No major soundness/compatibility
+issue was reported against `alpha.1` in the time it was up. Original
+target text, kept for context: "around 2026-08-20, contingent on no
+major issue surfacing against `alpha.1`... and the user's own explicit
+instruction to proceed... reaching the date alone does not authorize
+it." Upstream/RustSec reply status remained explicitly not part of this
+gate throughout (see project memory 2026-08-16).
 
-### Stable-publish work (do NOT start until explicitly instructed, on or after ~2026-08-20)
+### Stable-publish work
 
-1. `Cargo.toml` version -> `0.18.1`.
-2. Update `README.md`/`README_ja.md`/`README_zh.md`, `CHANGELOG.md`, and
-   this checklist to remove alpha-specific language.
-3. Keep `UNSAFE-002` documented as an accepted known limitation of
-   stable (already done, see row 2 above -- do not weaken this framing).
-4. Write stable release notes.
-5. Final preflight, same rigor as `alpha.1`'s:
-   - `cargo test`, `cargo test --all-features`, `cargo test --doc`
+Started 2026-08-17, per explicit user instruction ("cgmath-next 0.18.1
+Stable最終準備 指示書").
+
+1. Security-review fixes, landed as two independent commits, both
+   confirmed green (workflow-only changes, no `src/` touched, so no RC
+   trigger): `ea726ed` (`ci.yml` explicit `permissions: contents: read`
+   -- confirmed the `security` job needed nothing beyond this, no
+   broader grant added) and `a2207af` (every `uses:` in both workflow
+   files pinned to a full commit SHA, resolved individually per ref --
+   `dtolnay/rust-toolchain`'s three different branches, `@master`/
+   `@stable`/`@nightly`, kept as three different SHAs rather than
+   collapsed to one, since collapsing them would have silently changed
+   which Rust toolchain the test matrix runs against).
+2. `Cargo.toml` version -> `0.18.1`.
+3. Updated `CHANGELOG.md` (new `[Unreleased]` entries for the CI
+   hardening and feature-leak check -- kept under `[Unreleased]`
+   deliberately, not split into a dated `[0.18.1]` heading, since that
+   would assert a release date before the actual publish has happened;
+   convert it as part of the actual publish action, not this one), the
+   `publish.yml` `confirm_version` input example, and both GitHub issue
+   template placeholders -- all live user/operator-facing guidance, not
+   history. Left untouched, deliberately: `README.md`/`README_ja.md`/
+   `README_zh.md`'s "Release status" sections (still factually accurate
+   -- `0.18.1-alpha.1` is what's actually published right now, stable
+   isn't yet, and this checklist doesn't get to declare otherwise before
+   the real `cargo publish` happens) and every dependency-snippet
+   example (`version = "0.18.1"`, already written generically before
+   the alpha existed, matches a stable `0.18.1` under Cargo's own SemVer
+   pre-release matching rules without needing to change).
+4. Kept `UNSAFE-002` documented as an accepted known limitation of
+   stable (already done, see row 2 above -- not weakened).
+5. Stable release notes: see `docs/release-notes-0.18.1.md` (or wherever
+   this update ultimately lands them).
+6. Final preflight, same rigor as `alpha.1`'s:
+   - `cargo test`, `cargo test --all-features`, `cargo test --doc`,
+     `cargo check --no-default-features`
+   - All 6 pairwise feature combinations
+   - `compat/fixtures/dual-dep`, `swizzle-off` negative + positive
+     control, serde/mint/rand feature-leak check
    - `cargo package --list` (check for unexpected contents/bloat)
-   - `cargo publish --dry-run` and `cargo publish --dry-run --all-features`
+   - `cargo package`, `cargo publish --dry-run` and
+     `cargo publish --dry-run --all-features`
    - Extract the actual generated `.crate` and, from inside it, re-run
-     `cargo test`, `cargo test --all-features`, `cargo test --doc`
+     `cargo test`, `cargo test --all-features`, `cargo test --doc`,
+     `cargo check --no-default-features`, plus manual checks (VCS SHA
+     matches candidate commit, packaged version is `0.18.1`, no
+     resurrected SIMD description, no `baseline-results/` or other
+     bloat, license/README/SECURITY present, reasonable size, no
+     secrets/temp files/logs)
    - Confirm all existing blocking CI jobs are green
-   - **Do NOT** re-run the full Miri suite, the full reverse-dependency
-     fixture set, or the 59-benchmark suite unless `src/` actually
-     changed -- none of that changed since `alpha.1`, so those stay at
-     their `alpha.1`-verified results.
-6. If the preflight fails, or `cargo package --list` shows unexpected
-   contents, **stop and report** -- do not fix-and-continue or publish
+   - **Did NOT** re-run the full Miri suite, the full reverse-dependency
+     fixture set, or the 59-benchmark suite -- `src/`/`build.rs` are
+     unchanged since `alpha.1` (verified, see the source-freeze section
+     above), so those stay at their `alpha.1`-verified results.
+7. If the preflight fails, or `cargo package --list` shows unexpected
+   contents: stop and report -- do not fix-and-continue or publish
    unilaterally.
-7. **Even after a clean preflight: do not run `cargo publish`, create a
+8. **Even after a clean preflight: do not run `cargo publish`, create a
    tag, or create a GitHub Release.** Report the preflight results and
    the exact commit SHA that would be published, and wait for explicit
    separate approval before executing any of those three -- same

@@ -101,6 +101,18 @@ as part of the faithful 0.18.0 import (see `docs/provenance.md`).
    run as a blocking `compat` CI job on every push/PR, promoting that
    compatibility evidence from point-in-time verification to continuous
    regression protection.
+ - Added a `serde`/`mint`/`rand` feature-leak check to the `compat` CI
+   job, verified in both directions (absent with no features, present
+   with `--all-features`) so the check can't pass vacuously.
+ - CI hardening: `ci.yml` now declares explicit least-privilege
+   `permissions: contents: read`, and every GitHub Action used in
+   `ci.yml`/`publish.yml` is pinned to a full commit SHA rather than a
+   mutable tag or branch (trailing comment names the original ref).
+   `publish.yml` also gained a `permissions`/`concurrency` block and
+   `Cargo.toml` gained `publish = ["crates-io"]`, restricting publish to
+   the intended registry.
+ - Published `0.18.1-alpha.1`. An alpha observation period surfaced no
+   soundness or compatibility issues against it.
 
 ### Known compatibility gaps
 

@@ -9,7 +9,7 @@ on:
   workflow_dispatch:
     inputs:
       confirm_version:
-        description: "Type the exact version being published, to confirm this dispatch is intentional (e.g. 0.18.1-alpha.1)"
+        description: "Type the exact version being published, to confirm this dispatch is intentional (e.g. 0.18.1)"
         required: true
 
 # Least-privilege: this job only needs to read the repo to check it out.

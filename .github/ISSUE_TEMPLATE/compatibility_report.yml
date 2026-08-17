@@ -43,6 +43,6 @@ body:
     id: version
     attributes:
       label: cgmath-next version
-      placeholder: "0.18.1-alpha.1"
+      placeholder: "0.18.1"
     validations:
       required: true
