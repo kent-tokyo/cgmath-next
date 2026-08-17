@@ -7,18 +7,10 @@
 
 [English](README.md) | 日本語 | [中文](README_zh.md)
 
-`cgmath` 0.18 系列を保守し続ける、soundness(健全性)を重視したソース互換の後継クレートです。
+**まだ`cgmath` 0.18を使っていますか?** `cgmath-next`は、その現役で保守されている、ソース互換の後継クレートです —
+APIは同じまま、[既知のsoundness問題](https://rustsec.org/advisories/RUSTSEC-2026-0197.html)は修正済みです。
 
 > APIはそのまま、unsoundnessだけを取り除く。
-
-`cgmath-next`は、[`cgmath`](https://github.com/rustgd/cgmath) 0.18.0を基に独立して開発される、コミュニティ運営の互換後継ライブラリです。
-
-オリジナルの`cgmath`は保守が止まっており
-([RUSTSEC-2026-0196](https://rustsec.org/advisories/RUSTSEC-2026-0196.html))、
-既知のsoundness問題も抱えています
-([RUSTSEC-2026-0197](https://rustsec.org/advisories/RUSTSEC-2026-0197.html) /
-[rustgd/cgmath#565](https://github.com/rustgd/cgmath/issues/565))。
-`cgmath-next`は、この問題を修正し、soundnessおよび保守上の修正を継続して受け取れるようにするために存在します。可能な限りdrop-in(そのまま差し替え可能)な互換性を保ちます。
 
 ## 移行方法
 
@@ -34,6 +26,19 @@ use cgmath::{Matrix4, Quaternion, Vector3}; // 変更不要
 ```
 
 これは`cgmath-next`のコンパイル後ライブラリ名が引き続き`cgmath`であるためです(この点をfixtureベースで検証した内容は[`docs/compatibility.md`](docs/compatibility.md)を参照)。詳細と、renameすら不要なケースについては[`docs/migration.md`](docs/migration.md)を参照してください。
+
+## なぜ移行するのか
+
+| | `cgmath` 0.18 | `cgmath-next` 0.18.1 |
+|---|---|---|
+| API | — | 同じ |
+| 保守状況 | [保守停止](https://rustsec.org/advisories/RUSTSEC-2026-0196.html) | 現役で保守中 |
+| 既知のswap UB([RUSTSEC-2026-0197](https://rustsec.org/advisories/RUSTSEC-2026-0197.html)) | 影響あり | 修正済み |
+| import変更 | — | 不要 |
+| public API差分 | — | ゼロ |
+| ライセンス | Apache-2.0 | Apache-2.0 |
+
+`cgmath-next`は、[`cgmath`](https://github.com/rustgd/cgmath) 0.18.0を基に独立して開発される、コミュニティ運営の互換後継ライブラリです — 公式な後継ではありません。
 
 ## サンプル
 

@@ -7,18 +7,10 @@
 
 [English](README.md) | [日本語](README_ja.md) | 中文
 
-`cgmath` 0.18 系列的一个持续维护、以健全性(soundness)为核心、源码兼容的后继 crate。
+**还在使用 `cgmath` 0.18 吗?** `cgmath-next` 是它持续维护、源码兼容的后继版本 ——
+API 完全相同,[已知的 soundness 问题](https://rustsec.org/advisories/RUSTSEC-2026-0197.html)已修复。
 
 > 保留 API,消除 unsoundness(健全性缺陷)。
-
-`cgmath-next` 是基于 [`cgmath`](https://github.com/rustgd/cgmath) 0.18.0 独立开发和维护的社区后继库。
-
-原始的 `cgmath` 已经无人维护
-([RUSTSEC-2026-0196](https://rustsec.org/advisories/RUSTSEC-2026-0196.html)),
-并且存在一个已知的 soundness 问题
-([RUSTSEC-2026-0197](https://rustsec.org/advisories/RUSTSEC-2026-0197.html) /
-[rustgd/cgmath#565](https://github.com/rustgd/cgmath/issues/565))。
-`cgmath-next` 的存在就是为了修复这个问题,并持续接收 soundness 与维护性修复,同时尽可能保持可直接替换(drop-in)的兼容性。
 
 ## 迁移方法
 
@@ -34,6 +26,19 @@ use cgmath::{Matrix4, Quaternion, Vector3}; // 无需修改
 ```
 
 这是因为 `cgmath-next` 编译后的库名仍然是 `cgmath`(基于 fixture 的验证详见 [`docs/compatibility.md`](docs/compatibility.md))。更多细节,以及甚至无需改名的情况,请参见 [`docs/migration.md`](docs/migration.md)。
+
+## 为什么要迁移
+
+| | `cgmath` 0.18 | `cgmath-next` 0.18.1 |
+|---|---|---|
+| API | — | 相同 |
+| 维护状态 | [已无人维护](https://rustsec.org/advisories/RUSTSEC-2026-0196.html) | 持续积极维护 |
+| 已知的 swap UB([RUSTSEC-2026-0197](https://rustsec.org/advisories/RUSTSEC-2026-0197.html)) | 受影响 | 已修复 |
+| import 改动 | — | 无需 |
+| public API 差异 | — | 零 |
+| 许可证 | Apache-2.0 | Apache-2.0 |
+
+`cgmath-next` 是基于 [`cgmath`](https://github.com/rustgd/cgmath) 0.18.0 独立开发和维护的社区后继库 —— 并非官方延续项目。
 
 ## 示例
 

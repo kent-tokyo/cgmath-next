@@ -7,20 +7,12 @@
 
 English | [日本語](README_ja.md) | [中文](README_zh.md)
 
-A maintained, soundness-focused, source-compatible successor to cgmath 0.18.
+**Still using `cgmath` 0.18?** `cgmath-next` is its actively maintained,
+source-compatible successor — same API,
+[known soundness issue](https://rustsec.org/advisories/RUSTSEC-2026-0197.html)
+fixed.
 
 > Keep the API. Remove the unsoundness.
-
-`cgmath-next` is an independently maintained, community successor to
-[`cgmath`](https://github.com/rustgd/cgmath) 0.18.0.
-
-The original `cgmath` is unmaintained
-([RUSTSEC-2026-0196](https://rustsec.org/advisories/RUSTSEC-2026-0196.html))
-and has a known soundness issue
-([RUSTSEC-2026-0197](https://rustsec.org/advisories/RUSTSEC-2026-0197.html) /
-[rustgd/cgmath#565](https://github.com/rustgd/cgmath/issues/565)).
-`cgmath-next` exists to fix that issue and keep receiving soundness and
-maintenance fixes, while staying a drop-in replacement wherever possible.
 
 ## Migration
 
@@ -40,6 +32,21 @@ This works because `cgmath-next`'s compiled library name is still `cgmath`
 verification behind this). See
 [`docs/migration.md`](docs/migration.md) for more detail and for cases
 where a rename isn't even necessary.
+
+## Why migrate
+
+| | `cgmath` 0.18 | `cgmath-next` 0.18.1 |
+|---|---|---|
+| API | — | Same |
+| Maintenance | [unmaintained](https://rustsec.org/advisories/RUSTSEC-2026-0196.html) | Actively maintained |
+| Known swap UB ([RUSTSEC-2026-0197](https://rustsec.org/advisories/RUSTSEC-2026-0197.html)) | Affected | Fixed |
+| Import changes | — | None |
+| Public API diff | — | Zero |
+| License | Apache-2.0 | Apache-2.0 |
+
+`cgmath-next` is an independently maintained, community successor to
+[`cgmath`](https://github.com/rustgd/cgmath) 0.18.0 — not an official
+continuation.
 
 ## Examples
 
