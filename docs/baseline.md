@@ -34,9 +34,16 @@ baseline import per AGENTS.md §15 ("baseline warning を記録し、新規 warn
 ## `cargo fmt --check` (11 files, exit 1)
 
 Upstream 0.18.0 was formatted with a 2020-era rustfmt. Current stable rustfmt
-disagrees on 11 files. Toolchain-update failure, not a regression — no
-functional issue. Left unformatted in the baseline import; will not be
-bulk-reformatted in the same commit as any functional change (AGENTS.md §22).
+disagreed on 11 files, as of this baseline snapshot. Toolchain-update
+failure, not a regression — no functional issue. Left unformatted in the
+baseline import; not bulk-reformatted in the same commit as any functional
+change (AGENTS.md §22) — instead fixed incrementally, in isolated
+formatting-only commits, as files were touched for other reasons, plus a
+final dedicated commit for the remaining 4 (`fb7ca97`, 2026-08-17, after
+`0.18.1` stable shipped). **`cargo fmt --check` now passes clean** as of
+that commit; the `fmt` CI job remains `continue-on-error: true`
+(informational) rather than flipped to blocking, since that's a separate
+policy decision from just fixing the drift.
 
 ## `cargo clippy --all-targets --all-features` (exit 101)
 
