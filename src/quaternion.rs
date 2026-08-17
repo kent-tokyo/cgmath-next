@@ -106,7 +106,7 @@ impl<S: BaseFloat> Quaternion<S> {
     }
 
     /// Do a normalized linear interpolation with `other`, by `amount`.
-    /// 
+    ///
     /// This takes the shortest path, so if the quaternions have a negative
     /// dot product, the interpolation will be between `self` and `-other`.
     pub fn nlerp(self, mut other: Quaternion<S>, amount: S) -> Quaternion<S> {
@@ -121,7 +121,7 @@ impl<S: BaseFloat> Quaternion<S> {
     ///
     /// Return the spherical linear interpolation between the quaternion and
     /// `other`. Both quaternions should be normalized first.
-    /// 
+    ///
     /// This takes the shortest path, so if the quaternions have a negative
     /// dot product, the interpolation will be between `self` and `-other`.
     ///
@@ -1002,7 +1002,7 @@ mod tests {
             -0.5576775358252053,
             -0.5576775358252053,
             -0.5576775358252053,
-            0.2588190451025208
+            0.2588190451025208,
         ]);
         assert_ulps_eq!(expected, q.slerp(r, 0.25));
     }

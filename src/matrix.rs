@@ -1166,7 +1166,6 @@ impl<S: BaseFloat> Transform<Point3<S>> for Matrix3<S> {
 }
 
 impl<S: BaseFloat> Transform<Point3<S>> for Matrix4<S> {
-
     fn look_at(eye: Point3<S>, center: Point3<S>, up: Vector3<S>) -> Matrix4<S> {
         Matrix4::look_at_rh(eye, center, up)
     }
