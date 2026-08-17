@@ -119,9 +119,13 @@ v.zy();   // Vector2 { x: 3.0, y: 2.0 }
 
 ## 发布状态
 
-**`0.18.1-alpha.1` 已发布**到 crates.io,并已打标签
-([`v0.18.1-alpha.1`](https://github.com/kent-tokyo/cgmath-next/releases/tag/v0.18.1-alpha.1)),
-在 GitHub 上标记为 pre-release。这是一个 **alpha** 版本,不代表稳定性保证 — 具体满足了哪些发布条件、还有哪些尚未满足,详见 [`docs/release-checklist.md`](docs/release-checklist.md);在 `0.18.1` 正式(stable)发布前唯一已知的差距,详见 `docs/unsafe-audit.md` 中的 `UNSAFE-002` 章节。目前尚未发布任何 stable 版本。
+**`0.18.1`(stable)已发布**到 crates.io,并已打标签
+([`v0.18.1`](https://github.com/kent-tokyo/cgmath-next/releases/tag/v0.18.1))。
+在此之前经过了 `0.18.1-alpha.1` 的 alpha 观察期,期间未收到任何 soundness
+或兼容性方面的重大问题报告。完整的发布条件历史详见
+[`docs/release-checklist.md`](docs/release-checklist.md);本 stable
+系列中唯一被接受为永久性已知限制的事项,详见 `docs/unsafe-audit.md` 中的
+`UNSAFE-002` 章节。
 
 ## 贡献指南
 

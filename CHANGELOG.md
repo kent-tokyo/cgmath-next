@@ -10,6 +10,8 @@ as part of the faithful 0.18.0 import (see `docs/provenance.md`).
 
 ## [Unreleased] (cgmath-next)
 
+## [0.18.1] (cgmath-next) - 2026-08-17
+
 ### Fixed
 
  - **Soundness**: `Matrix{2,3,4}::swap_columns` and `Matrix{2,3,4}::swap_elements`
@@ -111,8 +113,9 @@ as part of the faithful 0.18.0 import (see `docs/provenance.md`).
    `publish.yml` also gained a `permissions`/`concurrency` block and
    `Cargo.toml` gained `publish = ["crates-io"]`, restricting publish to
    the intended registry.
- - Published `0.18.1-alpha.1`. An alpha observation period surfaced no
-   soundness or compatibility issues against it.
+ - Published `0.18.1-alpha.1`, then `0.18.1` stable -- an alpha
+   observation period surfaced no soundness or compatibility issues
+   against it.
 
 ### Known compatibility gaps
 

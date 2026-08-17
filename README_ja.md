@@ -119,9 +119,9 @@ v.zy();   // Vector2 { x: 3.0, y: 2.0 }
 
 ## 公開状況
 
-**`0.18.1-alpha.1`はcrates.ioに公開済み**で、タグ付けされ
-([`v0.18.1-alpha.1`](https://github.com/kent-tokyo/cgmath-next/releases/tag/v0.18.1-alpha.1))、
-GitHub上ではpre-releaseとして表示されています。これは**alpha**であり、安定性を保証するものではありません — 具体的にどのgating条件を満たし、どれがまだ満たされていないかは[`docs/release-checklist.md`](docs/release-checklist.md)を、`0.18.1`のstableリリース前に残っている唯一の既知のギャップについては`docs/unsafe-audit.md`の`UNSAFE-002`章を参照してください。stableリリースはまだ公開していません。
+**`0.18.1`(stable)はcrates.ioに公開済み**で、タグ付けされています
+([`v0.18.1`](https://github.com/kent-tokyo/cgmath-next/releases/tag/v0.18.1))。
+その前段階として`0.18.1-alpha.1`のalpha観察期間を経ており、soundnessや互換性に関する重大な問題は報告されませんでした。gatingの経緯全体は[`docs/release-checklist.md`](docs/release-checklist.md)を、このstableシリーズで恒久的な既知制約として受容している唯一の項目については`docs/unsafe-audit.md`の`UNSAFE-002`章を参照してください。
 
 ## 貢献方法
 

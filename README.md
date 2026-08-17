@@ -184,14 +184,13 @@ undefined behavior) are treated as security issues, not ordinary bugs.
 
 ## Release status
 
-**`0.18.1-alpha.1` is published** to crates.io, tagged
-([`v0.18.1-alpha.1`](https://github.com/kent-tokyo/cgmath-next/releases/tag/v0.18.1-alpha.1)),
-and marked as a GitHub pre-release. This is an **alpha**, not a stability
-guarantee — see
-[`docs/release-checklist.md`](docs/release-checklist.md) for the exact
-gating conditions met and not yet met, and `docs/unsafe-audit.md`'s
-`UNSAFE-002` section for the one known gap before a `0.18.1` stable
-release. No stable release has been published.
+**`0.18.1` (stable) is published** to crates.io, tagged
+([`v0.18.1`](https://github.com/kent-tokyo/cgmath-next/releases/tag/v0.18.1)).
+`0.18.1-alpha.1` preceded it as an alpha observation period with no
+soundness or compatibility issues reported against it — see
+[`docs/release-checklist.md`](docs/release-checklist.md) for the full
+gating history, and `docs/unsafe-audit.md`'s `UNSAFE-002` section for
+the one known limitation accepted as permanent in this stable series.
 
 ## Contributing
 
