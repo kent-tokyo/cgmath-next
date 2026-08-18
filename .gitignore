@@ -16,3 +16,4 @@ compat/fixtures/**/target/
 compat/fixtures/**/Cargo.lock
 AGENTS.md
 ROADMAP*.md
+tasks/
